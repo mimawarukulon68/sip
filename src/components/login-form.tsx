@@ -65,7 +65,7 @@ export function LoginForm() {
             width={400}
             height={250}
             className="rounded-t-lg"
-            data-ai-hint="security login"
+            data-ai-hint="mosque modern"
           />
         </div>
         <CardTitle className="text-3xl font-bold">Login</CardTitle>
@@ -139,7 +139,7 @@ export function LoginForm() {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg py-2">
                   <FormLabel className="font-normal text-sm">
-                    Remember me next time
+                    Ingat Saya
                   </FormLabel>
                   <FormControl>
                     <Switch
@@ -151,19 +151,18 @@ export function LoginForm() {
               )}
             />
             <Button type="submit" className="w-full text-lg py-6">
-              Sign In
+              Login
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter className="flex-col items-center justify-center">
-        <div className="text-sm text-muted-foreground">
-          {"Don't have an account? "}
+        <div className="text-sm">
           <Link
             href="#"
             className="font-semibold text-primary underline-offset-4 hover:underline"
           >
-            Sign Up
+            Lupa Password?
           </Link>
         </div>
       </CardFooter>
