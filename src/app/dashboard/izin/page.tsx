@@ -4,10 +4,11 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { addDays, format } from "date-fns";
-import { CalendarIcon, Upload } from "lucide-react";
+import { addDays, format, formatRFC3339 } from "date-fns";
+import { id } from "date-fns/locale";
+import { Calendar as CalendarIcon, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data for students
 const students = [
@@ -65,12 +67,15 @@ export default function PermissionFormPage() {
   const searchParams = useSearchParams();
   const studentId = searchParams.get("studentId");
   const student = students.find((s) => s.id === Number(studentId));
+  const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       studentName: student?.name || "",
       studentClass: student?.class || "",
+      reasonType: "Sakit",
+      duration: "1",
       startDate: new Date(),
       reasonText: "",
     },
@@ -81,30 +86,51 @@ export default function PermissionFormPage() {
 
   React.useEffect(() => {
     if (watchStartDate && watchDuration) {
-      const endDate = addDays(watchStartDate, parseInt(watchDuration) - 1);
+      const durationDays = parseInt(watchDuration, 10);
+      const endDate = addDays(watchStartDate, durationDays - 1);
       form.setValue("endDate", endDate);
     }
   }, [watchStartDate, watchDuration, form]);
+  
+  const handleDateSelect = (date: Date | undefined) => {
+    if(!date) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    if(date < today) {
+        toast({
+            variant: "destructive",
+            title: "Tanggal Tidak Valid",
+            description: "Tanggal yang Anda pilih berada di masa lalu. Silakan gunakan tombol 'Ajukan Izin Susulan' di dasbor Anda untuk pengajuan izin yang sudah terjadi."
+        })
+        return;
+    }
+    form.setValue("startDate", date);
+  }
 
   const whatsappMessage = React.useMemo(() => {
     const values = form.getValues();
     if (!values.studentName || !values.reasonType || !values.startDate || !values.endDate) {
       return "Mohon lengkapi formulir untuk melihat pratinjau pesan.";
     }
-    const startDateFormatted = format(values.startDate, "d MMMM yyyy");
-    const endDateFormatted = format(values.endDate, "d MMMM yyyy");
-    const duration = values.duration === "1" ? "" : `selama ${values.duration} hari, `;
-    const dateRange = startDateFormatted === endDateFormatted
-        ? `pada tanggal ${startDateFormatted}`
-        : `dari tanggal ${startDateFormatted} sampai ${endDateFormatted}`;
-        
-    let message = `Assalamu'alaikum Wr. Wb.\nDengan hormat, saya selaku orang tua/wali murid dari:\n\nNama: *${values.studentName}*\nKelas: *${values.studentClass}*\n\nMemberitahukan bahwa anak saya tidak dapat mengikuti kegiatan belajar mengajar ${dateRange} dikarenakan *${values.reasonType.toLowerCase()}*.`;
+
+    const durationDays = parseInt(values.duration, 10);
+    const startDateFormatted = format(values.startDate, "d MMMM yyyy", { locale: id });
+
+    let message: string;
+
+    if(durationDays === 1){
+         message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama 1 hari, hari ini tanggal ${startDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+    } else {
+        const endDateFormatted = format(values.endDate, "d MMM yyyy", { locale: id });
+        const startDateShort = format(values.startDate, "d MMM", { locale: id });
+        message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama ${durationDays} hari, dari tanggal ${startDateShort} s.d. ${endDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+    }
     
     if(values.reasonText) {
-        message += `\n\nKeterangan: ${values.reasonText}`;
+        message += `\nKeterangan: ${values.reasonText}`;
     }
 
-    message += `\n\nDemikian surat pemberitahuan ini saya sampaikan. Atas perhatian Bapak/Ibu guru, saya ucapkan terima kasih.\nWassalamu'alaikum Wr. Wb.`;
+    message += `\n\nAtas perhatian Bapak/Ibu Guru, kami ucapkan terima kasih.\nWassalamu'alaikum Wr. Wb.`;
 
     return message;
   }, [form.watch()]);
@@ -113,6 +139,10 @@ export default function PermissionFormPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     // Logic to send notification
+    toast({
+        title: "Pemberitahuan Terkirim",
+        description: "Formulir izin Anda telah berhasil dikirimkan."
+    })
   }
 
   if (!student) {
@@ -124,18 +154,18 @@ export default function PermissionFormPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-2xl">
+    <main className="flex min-h-screen w-full items-center justify-center bg-muted/20 p-4 md:p-8">
+      <Card className="w-full max-w-3xl shadow-lg rounded-xl">
         <CardHeader>
-          <CardTitle>Formulir Pemberitahuan Perizinan Siswa</CardTitle>
+          <CardTitle className="text-2xl">Formulir Pemberitahuan Perizinan Siswa</CardTitle>
           <CardDescription>
-            Lengkapi formulir di bawah ini untuk mengajukan izin.
+            Lengkapi formulir di bawah ini untuk mengajukan izin reguler.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
                   control={form.control}
                   name="studentName"
@@ -143,7 +173,7 @@ export default function PermissionFormPage() {
                     <FormItem>
                       <FormLabel>Nama Siswa</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted"/>
+                        <Input {...field} readOnly className="bg-muted/50"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -156,7 +186,7 @@ export default function PermissionFormPage() {
                     <FormItem>
                       <FormLabel>Kelas</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted"/>
+                        <Input {...field} readOnly className="bg-muted/50"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -169,12 +199,12 @@ export default function PermissionFormPage() {
                 name="reasonType"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>Alasan Izin</FormLabel>
+                    <FormLabel>Jenis Izin</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-col space-y-1"
+                        className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-6"
                       >
                         <FormItem className="flex items-center space-x-3 space-y-0">
                           <FormControl>
@@ -186,7 +216,7 @@ export default function PermissionFormPage() {
                           <FormControl>
                             <RadioGroupItem value="Izin" />
                           </FormControl>
-                          <FormLabel className="font-normal">Izin (keperluan keluarga, dll)</FormLabel>
+                          <FormLabel className="font-normal">Izin</FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
@@ -205,7 +235,7 @@ export default function PermissionFormPage() {
                        <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex items-center space-x-4"
+                        className="flex items-center space-x-6"
                       >
                         <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormControl>
@@ -232,7 +262,7 @@ export default function PermissionFormPage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
                   control={form.control}
                   name="startDate"
@@ -245,16 +275,16 @@ export default function PermissionFormPage() {
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full justify-start text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? (
-                                format(field.value, "PPP")
+                                format(field.value, "d MMMM yyyy", { locale: id })
                               ) : (
                                 <span>Pilih tanggal</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -262,7 +292,7 @@ export default function PermissionFormPage() {
                           <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={handleDateSelect}
                             disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
                             initialFocus
                           />
@@ -279,10 +309,10 @@ export default function PermissionFormPage() {
                     <FormItem>
                       <FormLabel>Tanggal Selesai</FormLabel>
                       <FormControl>
-                        <Input
-                          value={field.value ? format(field.value, "PPP") : ""}
+                         <Input
+                          value={field.value ? format(field.value, "d MMMM yyyy", { locale: id }) : ""}
                           readOnly
-                          className="bg-muted"
+                          className="bg-muted/50"
                         />
                       </FormControl>
                       <FormMessage />
@@ -328,16 +358,16 @@ export default function PermissionFormPage() {
                   )}
                 />
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full text-base font-semibold py-6">
                 Kirim Pemberitahuan
               </Button>
             </form>
           </Form>
 
            <div className="mt-8 pt-6 border-t">
-              <h3 className="text-lg font-semibold mb-2">Pratinjau Pesan WhatsApp</h3>
-              <Card className="bg-muted">
-                <CardContent className="p-4 whitespace-pre-wrap text-sm">
+              <h3 className="text-lg font-semibold mb-4">Pratinjau Pesan WhatsApp</h3>
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 whitespace-pre-wrap text-sm font-mono leading-relaxed">
                     {whatsappMessage}
                 </CardContent>
               </Card>

@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import Image from "next/image";
+import { School, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -56,21 +54,16 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader>
-        <div className="mb-4">
-          <Image
-            src="https://placehold.co/400x250.png"
-            alt="Login illustration"
-            width={400}
-            height={250}
-            className="rounded-t-lg"
-            data-ai-hint="mosque modern"
-          />
-        </div>
-        <CardTitle className="text-3xl font-bold">Login</CardTitle>
+    <Card className="w-full max-w-md shadow-lg rounded-xl">
+       <CardHeader className="text-center">
+         <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full mb-4">
+            <School className="h-12 w-12" />
+         </div>
+        <CardTitle className="text-2xl font-bold">SIPS MIRT</CardTitle>
         <CardDescription>
-          Please Sign in to continue.
+          Sistem Informasi Perizinan Siswa
+          <br />
+          MI Roudlotut Tholibin Warukulon
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -82,6 +75,7 @@ export function LoginForm() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
+                    <FormLabel>Email</FormLabel>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <FormControl>
@@ -101,6 +95,7 @@ export function LoginForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
+                     <FormLabel>Password</FormLabel>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <FormControl>
@@ -133,19 +128,20 @@ export function LoginForm() {
                 )}
               />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <FormField
                 control={form.control}
                 name="remember"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        id="remember"
                       />
                     </FormControl>
-                    <FormLabel className="font-normal text-sm">
+                    <FormLabel htmlFor="remember" className="font-normal text-sm">
                       Ingat Saya
                     </FormLabel>
                   </FormItem>
@@ -153,12 +149,12 @@ export function LoginForm() {
               />
                <Link
                   href="#"
-                  className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
                   Lupa Password?
                 </Link>
             </div>
-            <Button type="submit" className="w-full text-lg py-6">
+            <Button type="submit" className="w-full text-base font-semibold py-6 bg-primary hover:bg-primary/90">
               Login
             </Button>
           </form>

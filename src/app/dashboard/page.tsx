@@ -11,16 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History } from "lucide-react";
 
-// Mock data for students, this would typically come from an API
+// Mock data for students and academic period
 const students = [
   {
     id: 1,
     name: "Ahmad Budi",
     class: "Kelas 4",
     permissionStatus: null,
-    totalPermissions: 2,
+    attendance: { sakit: 2, izin: 1 },
   },
   {
     id: 2,
@@ -29,9 +29,9 @@ const students = [
     permissionStatus: {
       status: "Sakit",
       endDate: "2024-08-25",
-      color: "yellow",
+      color: "red",
     },
-    totalPermissions: 1,
+    attendance: { sakit: 1, izin: 0 },
   },
    {
     id: 3,
@@ -40,64 +40,73 @@ const students = [
     permissionStatus: {
       status: "Izin",
       endDate: "2024-08-24",
-      color: "red",
+      color: "yellow",
     },
-    totalPermissions: 3,
+    attendance: { sakit: 0, izin: 3 },
   },
 ];
 
+const currentAcademicPeriod = {
+    name: "Tengah Semester 1",
+    dates: "15 Juli 2024 - 15 September 2024"
+};
+
+const getBadgeInfo = (status: {status: string, endDate: string, color: string} | null) => {
+    if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
+    const formattedDate = new Date(status.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    if (status.status.toLowerCase() === 'sakit') return { text: `Sedang Sakit hingga ${formattedDate}`, className: "bg-red-100 text-red-800 border-red-200" };
+    if (status.status.toLowerCase() === 'izin') return { text: `Sedang Izin hingga ${formattedDate}`, className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
+    return { text: "Status Tidak Diketahui", className: "bg-gray-100 text-gray-800 border-gray-200" };
+}
+
+
 export default function DashboardPage() {
-  const parentName = "John Doe"; // This would be dynamic based on logged in user
+  const parentName = "Wali Murid"; // This would be dynamic based on logged in user
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+    <div className="flex min-h-screen w-full flex-col bg-muted/10">
+      <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold">
-            Selamat Datang Bapak/Ibu Wali Murid {parentName}
+          <h1 className="text-3xl font-bold tracking-tight">
+            Selamat Datang Bapak/Ibu {parentName}
           </h1>
           <p className="text-muted-foreground">
-            Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di
-            sini.
+            Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di sini.
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {students.map((student) => (
-            <Card key={student.id}>
-              <CardHeader>
-                <CardTitle>{student.name}</CardTitle>
-                <CardDescription>{student.class}</CardDescription>
+          {students.map((student) => {
+              const badgeInfo = getBadgeInfo(student.permissionStatus);
+              const totalIzin = student.attendance.sakit + student.attendance.izin;
+            return (
+            <Card key={student.id} className="shadow-md rounded-xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                    <CardTitle className="text-xl">{student.name}</CardTitle>
+                    <CardDescription>{student.class}</CardDescription>
+                </div>
+                 <Badge variant="outline" className={badgeInfo.className}>
+                      {badgeInfo.text}
+                 </Badge>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Status Izin Saat Ini</h4>
-                  {student.permissionStatus ? (
-                     <Badge 
-                      className={`bg-${student.permissionStatus.color}-100 text-${student.permissionStatus.color}-800 border-${student.permissionStatus.color}-200`}
-                      variant="outline"
-                    >
-                      {student.permissionStatus.status} hingga {new Date(student.permissionStatus.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-                      Aktif Masuk
-                    </Badge>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">Ringkasan Absensi</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Total Izin: {student.totalPermissions} kali
-                  </p>
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-2 text-sm">Ringkasan Absensi Periode Berjalan</h4>
+                  <p className="text-xs text-muted-foreground mb-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
+                  <div className="text-sm space-y-1">
+                      <p>Total Izin: {totalIzin} kali</p>
+                      <p>🤒 Sakit: {student.attendance.sakit} kali</p>
+                      <p>🗓️ Izin: {student.attendance.izin} kali</p>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end gap-2">
+              <CardFooter className="flex flex-wrap justify-end gap-2 bg-slate-50 p-4 rounded-b-xl">
                 {student.permissionStatus ? (
                   <>
                     <Button variant="outline" size="sm">
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Perpanjang
+                      Perpanjang Izin
                     </Button>
                     <Button variant="outline" size="sm">
                        <Check className="mr-2 h-4 w-4" />
@@ -105,7 +114,7 @@ export default function DashboardPage() {
                     </Button>
                      <Button variant="destructive" size="sm">
                       <X className="mr-2 h-4 w-4" />
-                      Batalkan
+                      Batalkan Izin
                     </Button>
                   </>
                 ) : (
@@ -116,19 +125,20 @@ export default function DashboardPage() {
                     </Button>
                   </Link>
                 )}
+                 <Button variant="outline" size="sm">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Ajukan Izin Susulan
+                 </Button>
+                 <Button variant="outline" size="sm">
+                    <History className="mr-2 h-4 w-4" />
+                    Lihat Riwayat
+                 </Button>
               </CardFooter>
             </Card>
-          ))}
+          )})}
         </div>
       </main>
     </div>
   );
 }
 
-// Helper to get color for badge based on status
-const getBadgeColor = (status: string | null) => {
-  if (!status) return 'green';
-  if (status.toLowerCase() === 'sakit') return 'yellow';
-  if (status.toLowerCase() === 'izin') return 'red';
-  return 'gray';
-}
