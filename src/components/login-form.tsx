@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { School } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,6 +53,9 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardHeader className="text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <School className="h-8 w-8" />
+        </div>
         <CardTitle className="text-2xl font-bold">SIPS MIRT</CardTitle>
         <CardDescription>
           Sistem Informasi Perizinan Siswa MI Roudlotut Tholibin Warukulon
