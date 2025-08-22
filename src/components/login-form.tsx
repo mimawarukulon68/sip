@@ -27,7 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -86,7 +86,7 @@ export function LoginForm() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <FormControl>
                         <Input
-                          placeholder="Username"
+                          placeholder="Email"
                           {...field}
                           className="pl-10"
                         />
@@ -133,39 +133,37 @@ export function LoginForm() {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="remember"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg py-2">
-                  <FormLabel className="font-normal text-sm">
-                    Ingat Saya
-                  </FormLabel>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="flex items-center justify-between">
+              <FormField
+                control={form.control}
+                name="remember"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal text-sm">
+                      Ingat Saya
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+               <Link
+                  href="#"
+                  className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  Lupa Password?
+                </Link>
+            </div>
             <Button type="submit" className="w-full text-lg py-6">
               Login
             </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex-col items-center justify-center">
-        <div className="text-sm">
-          <Link
-            href="#"
-            className="font-semibold text-primary underline-offset-4 hover:underline"
-          >
-            Lupa Password?
-          </Link>
-        </div>
-      </CardFooter>
     </Card>
   );
 }
