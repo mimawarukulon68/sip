@@ -20,7 +20,7 @@ const students = [
     name: "Ahmad Budi",
     class: "Kelas 4",
     permissionStatus: null,
-    attendance: { sakit: 2, izin: 1 },
+    attendance: { sakit: { count: 2, days: 3 }, izin: { count: 1, days: 1 } },
   },
   {
     id: 2,
@@ -29,9 +29,8 @@ const students = [
     permissionStatus: {
       status: "Sakit",
       endDate: "2024-08-25",
-      color: "red",
     },
-    attendance: { sakit: 1, izin: 0 },
+    attendance: { sakit: { count: 1, days: 2 }, izin: { count: 0, days: 0 } },
   },
    {
     id: 3,
@@ -40,9 +39,8 @@ const students = [
     permissionStatus: {
       status: "Izin",
       endDate: "2024-08-24",
-      color: "yellow",
     },
-    attendance: { sakit: 0, izin: 3 },
+    attendance: { sakit: { count: 0, days: 0 }, izin: { count: 3, days: 5 } },
   },
 ];
 
@@ -51,7 +49,7 @@ const currentAcademicPeriod = {
     dates: "15 Juli 2024 - 15 September 2024"
 };
 
-const getBadgeInfo = (status: {status: string, endDate: string, color: string} | null) => {
+const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
     if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
     const formattedDate = new Date(status.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
     if (status.status.toLowerCase() === 'sakit') return { text: `Sedang Sakit hingga ${formattedDate}`, className: "bg-red-100 text-red-800 border-red-200" };
@@ -78,38 +76,52 @@ export default function DashboardPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
               const badgeInfo = getBadgeInfo(student.permissionStatus);
-              const totalIzin = student.attendance.sakit + student.attendance.izin;
+              const totalIzinCount = student.attendance.sakit.count + student.attendance.izin.count;
+              const totalIzinDays = student.attendance.sakit.days + student.attendance.izin.days;
+
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
+              <CardHeader className="flex flex-row items-start justify-between pb-2">
+                <div className="flex-1">
                     <CardTitle className="text-xl">{student.name}</CardTitle>
                     <CardDescription>{student.class}</CardDescription>
                 </div>
-                 <Badge variant="outline" className={badgeInfo.className}>
+                 <Badge variant="outline" className={`ml-2 shrink-0 ${badgeInfo.className}`}>
                       {badgeInfo.text}
                  </Badge>
               </CardHeader>
               <CardContent className="space-y-4 flex-grow">
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-2 text-sm">Ringkasan Absensi Periode Berjalan</h4>
-                  <p className="text-xs text-muted-foreground mb-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
-                  <div className="text-sm space-y-1">
-                      <p>Total Izin: {totalIzin} kali</p>
-                      <p>🤒 Sakit: {student.attendance.sakit} kali</p>
-                      <p>🗓️ Izin: {student.attendance.izin} kali</p>
-                  </div>
+                 <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+                      <Calendar className="w-4 h-4" />
+                      Ringkasan Absensi Periode Ini
+                    </h4>
+                     <p className="text-xs text-muted-foreground mb-3 -mt-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="bg-slate-100 rounded-lg p-3">
+                            <div className="text-xs text-slate-600">Total Izin</div>
+                            <div className="text-sm font-semibold text-slate-900">{totalIzinCount} kali ({totalIzinDays} hari)</div>
+                        </div>
+                        <div className="bg-red-100 rounded-lg p-3">
+                            <div className="text-xs text-red-600">Sakit</div>
+                            <div className="text-sm font-semibold text-red-700">{student.attendance.sakit.count} kali ({student.attendance.sakit.days} hari)</div>
+                        </div>
+                        <div className="bg-yellow-100 rounded-lg p-3">
+                            <div className="text-xs text-yellow-600">Izin</div>
+                            <div className="text-sm font-semibold text-yellow-700">{student.attendance.izin.count} kali ({student.attendance.izin.days} hari)</div>
+                        </div>
+                    </div>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl">
                 <div className="flex gap-2 flex-wrap">
                     {student.permissionStatus ? (
-                    <>
+                     <>
                         <Button variant="outline" size="sm" className="flex-1">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Perpanjang
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="secondary" size="sm" className="flex-1">
                         <Check className="mr-2 h-4 w-4" />
                         Sudah Masuk
                         </Button>
@@ -133,9 +145,9 @@ export default function DashboardPage() {
                     </>
                     )}
                 </div>
-                <Button variant="outline" size="sm" className="w-full">
+                 <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary/90 hover:bg-primary/5">
                     <History className="mr-2 h-4 w-4" />
-                    Lihat Riwayat
+                    Lihat Riwayat Lengkap
                 </Button>
               </CardFooter>
             </Card>
