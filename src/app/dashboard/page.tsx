@@ -97,7 +97,7 @@ export default function DashboardPage() {
                       Ringkasan Absensi Periode Ini
                     </h4>
                      <p className="text-xs text-muted-foreground mb-3 -mt-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-2">
                         <div className="bg-slate-100 rounded-lg p-3">
                             <div className="text-xs text-slate-600">Total Izin</div>
                             <div className="text-sm font-semibold text-slate-900">{totalIzinCount} kali ({totalIzinDays} hari)</div>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl">
-                <div className="flex gap-2 flex-wrap">
+                 <div className="flex gap-2 flex-wrap">
                     {student.permissionStatus ? (
                      <>
                         <Button variant="outline" size="sm" className="flex-1">
