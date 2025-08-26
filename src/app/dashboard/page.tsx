@@ -51,9 +51,8 @@ const currentAcademicPeriod = {
 
 const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
     if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
-    const formattedDate = new Date(status.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-    if (status.status.toLowerCase() === 'sakit') return { text: `Sedang Sakit hingga ${formattedDate}`, className: "bg-red-100 text-red-800 border-red-200" };
-    if (status.status.toLowerCase() === 'izin') return { text: `Sedang Izin hingga ${formattedDate}`, className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
+    if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
+    if (status.status.toLowerCase() === 'izin') return { text: "Izin", className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
     return { text: "Status Tidak Diketahui", className: "bg-gray-100 text-gray-800 border-gray-200" };
 }
 
@@ -98,15 +97,15 @@ export default function DashboardPage() {
                     </h4>
                      <p className="text-xs text-muted-foreground mb-3 -mt-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
                     <div className="flex flex-col gap-2">
-                        <div className="bg-slate-100 rounded-lg p-3">
+                        <div className="bg-slate-50 rounded-lg p-3">
                             <div className="text-xs text-slate-600">Total Izin</div>
                             <div className="text-sm font-semibold text-slate-900">{totalIzinCount} kali ({totalIzinDays} hari)</div>
                         </div>
-                        <div className="bg-red-100 rounded-lg p-3">
+                        <div className="bg-red-50 rounded-lg p-3">
                             <div className="text-xs text-red-600">Sakit</div>
                             <div className="text-sm font-semibold text-red-700">{student.attendance.sakit.count} kali ({student.attendance.sakit.days} hari)</div>
                         </div>
-                        <div className="bg-yellow-100 rounded-lg p-3">
+                        <div className="bg-yellow-50 rounded-lg p-3">
                             <div className="text-xs text-yellow-600">Izin</div>
                             <div className="text-sm font-semibold text-yellow-700">{student.attendance.izin.count} kali ({student.attendance.izin.days} hari)</div>
                         </div>
