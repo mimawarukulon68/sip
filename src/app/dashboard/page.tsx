@@ -119,17 +119,19 @@ export default function DashboardPage() {
                         </Button>
                     </>
                     ) : (
-                    <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
-                        <Button size="sm" className="w-full">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Ajukan Izin
+                    <>
+                        <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
+                            <Button size="sm" className="w-full">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Ajukan Izin
+                            </Button>
+                        </Link>
+                         <Button variant="outline" size="sm" className="flex-1">
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Izin Susulan
                         </Button>
-                    </Link>
+                    </>
                     )}
-                    <Button variant="outline" size="sm" className="flex-1">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Izin Susulan
-                    </Button>
                 </div>
                 <Button variant="outline" size="sm" className="w-full">
                     <History className="mr-2 h-4 w-4" />
