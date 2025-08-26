@@ -80,7 +80,7 @@ export default function DashboardPage() {
               const badgeInfo = getBadgeInfo(student.permissionStatus);
               const totalIzin = student.attendance.sakit + student.attendance.izin;
             return (
-            <Card key={student.id} className="shadow-md rounded-xl">
+            <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                     <CardTitle className="text-xl">{student.name}</CardTitle>
@@ -90,7 +90,7 @@ export default function DashboardPage() {
                       {badgeInfo.text}
                  </Badge>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-grow">
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-2 text-sm">Ringkasan Absensi Periode Berjalan</h4>
                   <p className="text-xs text-muted-foreground mb-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
@@ -101,38 +101,40 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-wrap justify-end gap-2 bg-slate-50 p-4 rounded-b-xl">
-                {student.permissionStatus ? (
-                  <>
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Perpanjang Izin
+              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl">
+                <div className="flex gap-2 flex-wrap">
+                    {student.permissionStatus ? (
+                    <>
+                        <Button variant="outline" size="sm" className="flex-1">
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Perpanjang
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                        <Check className="mr-2 h-4 w-4" />
+                        Sudah Masuk
+                        </Button>
+                        <Button variant="destructive" size="sm" className="flex-1">
+                        <X className="mr-2 h-4 w-4" />
+                        Batalkan
+                        </Button>
+                    </>
+                    ) : (
+                    <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
+                        <Button size="sm" className="w-full">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Ajukan Izin
+                        </Button>
+                    </Link>
+                    )}
+                    <Button variant="outline" size="sm" className="flex-1">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Izin Susulan
                     </Button>
-                    <Button variant="outline" size="sm">
-                       <Check className="mr-2 h-4 w-4" />
-                      Sudah Masuk
-                    </Button>
-                     <Button variant="destructive" size="sm">
-                      <X className="mr-2 h-4 w-4" />
-                      Batalkan Izin
-                    </Button>
-                  </>
-                ) : (
-                  <Link href={`/dashboard/izin?studentId=${student.id}`}>
-                    <Button size="sm">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Ajukan Izin
-                    </Button>
-                  </Link>
-                )}
-                 <Button variant="outline" size="sm">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Ajukan Izin Susulan
-                 </Button>
-                 <Button variant="outline" size="sm">
+                </div>
+                <Button variant="outline" size="sm" className="w-full">
                     <History className="mr-2 h-4 w-4" />
                     Lihat Riwayat
-                 </Button>
+                </Button>
               </CardFooter>
             </Card>
           )})}
@@ -141,4 +143,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
