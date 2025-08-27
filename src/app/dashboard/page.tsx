@@ -44,11 +44,6 @@ const students = [
   },
 ];
 
-const currentAcademicPeriod = {
-    name: "Tengah Semester 1",
-    dates: "15 Juli 2024 - 15 September 2024"
-};
-
 const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
     if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
     if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
@@ -92,21 +87,23 @@ export default function DashboardPage() {
               <CardContent className="space-y-4 flex-grow">
                  <div className="border-t pt-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                      <Calendar className="w-4 h-4" />
                       Ringkasan Perizinan Siswa
                     </h4>
-                    <div className="flex flex-col gap-2">
-                        <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-3">
+                            <div className="bg-red-50 rounded-lg p-3">
+                                <div className="text-xs text-red-600">Sakit</div>
+                                <div className="text-sm font-semibold text-red-700">{student.attendance.sakit.count} kali ({student.attendance.sakit.days} hari)</div>
+                            </div>
+                            <div className="bg-yellow-50 rounded-lg p-3">
+                                <div className="text-xs text-yellow-600">Izin</div>
+                                <div className="text-sm font-semibold text-yellow-700">{student.attendance.izin.count} kali ({student.attendance.izin.days} hari)</div>
+                            </div>
+                        </div>
+                         <div className="bg-slate-50 rounded-lg p-3 flex flex-col justify-center items-center text-center">
                             <div className="text-xs text-slate-600">Total Izin</div>
-                            <div className="text-sm font-semibold text-slate-900">{totalIzinCount} kali ({totalIzinDays} hari)</div>
-                        </div>
-                        <div className="bg-red-50 rounded-lg p-3">
-                            <div className="text-xs text-red-600">Sakit</div>
-                            <div className="text-sm font-semibold text-red-700">{student.attendance.sakit.count} kali ({student.attendance.sakit.days} hari)</div>
-                        </div>
-                        <div className="bg-yellow-50 rounded-lg p-3">
-                            <div className="text-xs text-yellow-600">Izin</div>
-                            <div className="text-sm font-semibold text-yellow-700">{student.attendance.izin.count} kali ({student.attendance.izin.days} hari)</div>
+                            <div className="text-lg font-bold text-slate-900">{totalIzinCount} kali</div>
+                            <div className="text-sm text-slate-800">({totalIzinDays} hari)</div>
                         </div>
                     </div>
                 </div>
