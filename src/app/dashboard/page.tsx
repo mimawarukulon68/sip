@@ -120,7 +120,7 @@ export default function DashboardPage() {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Perpanjang
                         </Button>
-                        <Button variant="secondary" size="sm" className="flex-1">
+                        <Button variant="outline" size="sm" className="flex-1">
                         <Check className="mr-2 h-4 w-4" />
                         Sudah Masuk
                         </Button>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
                     </>
                     )}
                 </div>
-                 <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary/90 hover:bg-primary/5">
+                 <Button variant="outline" size="sm" className="w-full">
                     <History className="mr-2 h-4 w-4" />
                     Lihat Riwayat
                 </Button>
