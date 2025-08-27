@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-start justify-between pb-4">
+              <CardHeader className="flex flex-row items-start justify-between pb-4 border-b">
                 <div className="flex-1">
                     <CardTitle className="text-xl">{student.name}</CardTitle>
                     <CardDescription>{student.class}</CardDescription>
@@ -86,8 +86,7 @@ export default function DashboardPage() {
                       {badgeInfo.text}
                  </Badge>
               </CardHeader>
-              <CardContent className="space-y-4 flex-grow pt-0 pb-4">
-                 <Separator className="mb-4" />
+              <CardContent className="space-y-4 flex-grow pt-4 pb-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                       <ClipboardList className="h-4 w-4 text-gray-600"/>
@@ -112,7 +111,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl border-t">
+              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 border-t">
                  <div className="flex gap-2 flex-wrap">
                     {student.permissionStatus ? (
                      <>
