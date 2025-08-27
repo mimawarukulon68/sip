@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
@@ -69,12 +69,31 @@ const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
 
 
 export default function DashboardPage() {
-  const parentName = "Wali Murid"; // This would be dynamic based on logged in user
+  const parentName = "Budi Santoso"; // This would be dynamic based on logged in user
   const [selectedYear, setSelectedYear] = React.useState("2025/2026");
   const [selectedPeriod, setSelectedPeriod] = React.useState("Semester 1");
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
+       <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-14 sm:h-16">
+                <div className="flex items-center">
+                    <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center mr-2">
+                        <User className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                    <div>
+                        <h1 className="text-base sm:text-lg font-semibold text-gray-900">Sistem Perizinan Siswa</h1>
+                        <p className="text-xs sm:text-sm text-gray-600">Dashboard Orang Tua - {parentName}</p>
+                    </div>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs px-2 h-9">
+                    <LogOut className="w-3 h-3 mr-1" />
+                    Keluar
+                </Button>
+            </div>
+        </div>
+      </header>
       <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
         <div className="mb-4">
           <h1 className="text-3xl font-bold tracking-tight">
