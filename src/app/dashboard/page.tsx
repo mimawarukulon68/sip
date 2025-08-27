@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+
 
 // Mock data for students and academic period
 const students = [
@@ -75,7 +77,7 @@ export default function DashboardPage() {
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
+              <CardHeader className="flex flex-row items-start justify-between pb-4">
                 <div className="flex-1">
                     <CardTitle className="text-xl">{student.name}</CardTitle>
                     <CardDescription>{student.class}</CardDescription>
@@ -84,7 +86,8 @@ export default function DashboardPage() {
                       {badgeInfo.text}
                  </Badge>
               </CardHeader>
-              <CardContent className="space-y-4 flex-grow">
+              <CardContent className="space-y-4 flex-grow pt-0 pb-4">
+                 <Separator />
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                       <ClipboardList className="h-4 w-4 text-gray-600"/>
@@ -108,8 +111,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
+                <Separator />
               </CardContent>
-              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl">
+              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 rounded-b-xl border-t">
                  <div className="flex gap-2 flex-wrap">
                     {student.permissionStatus ? (
                      <>
