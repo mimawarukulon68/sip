@@ -84,7 +84,7 @@ export default function DashboardPage() {
                     <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-xl">{student.name}</CardTitle>
+                    <CardTitle className="text-base">{student.name}</CardTitle>
                     <CardDescription>{student.class}</CardDescription>
                   </div>
                 </div>
