@@ -93,9 +93,8 @@ export default function DashboardPage() {
                  <div className="border-t pt-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4" />
-                      Ringkasan Absensi Periode Ini
+                      Ringkasan Perizinan Siswa
                     </h4>
-                     <p className="text-xs text-muted-foreground mb-3 -mt-2">{currentAcademicPeriod.name} ({currentAcademicPeriod.dates})</p>
                     <div className="flex flex-col gap-2">
                         <div className="bg-slate-50 rounded-lg p-3">
                             <div className="text-xs text-slate-600">Total Izin</div>
