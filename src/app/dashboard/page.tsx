@@ -12,6 +12,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -80,17 +88,43 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center h-14 sm:h-16">
                 <div className="flex items-center">
                     <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center mr-2">
-                        <User className="w-4 h-4 text-primary-foreground" />
+                        <ClipboardList className="w-4 h-4 text-primary-foreground" />
                     </div>
                     <div>
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Sistem Perizinan Siswa</h1>
                         <p className="text-xs sm:text-sm text-gray-600">Dashboard Orang Tua/Wali Murid</p>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs px-2 h-9">
-                    <LogOut className="w-3 h-3 mr-1" />
-                    Keluar
-                </Button>
+                 <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                       <Avatar className="h-10 w-10">
+                         <AvatarImage src="https://i.pravatar.cc/150?u=parent" alt={parentName} />
+                         <AvatarFallback>{parentName.charAt(0)}</AvatarFallback>
+                       </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{parentName}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          wali.murid@example.com
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Keluar</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
       </header>
@@ -235,3 +269,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
