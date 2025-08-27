@@ -1,3 +1,4 @@
+
 "use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const students = [
   {
     id: 1,
-    name: "Ahmad Budi",
+    name: "MOCHAMMAD ALIFIKUROFIQ YAZIZ ABDULLAH",
     class: "Kelas 4",
     permissionStatus: null,
     attendance: { sakit: { count: 2, days: 3 }, izin: { count: 1, days: 1 } },
