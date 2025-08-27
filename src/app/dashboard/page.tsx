@@ -87,7 +87,7 @@ export default function DashboardPage() {
                  </Badge>
               </CardHeader>
               <CardContent className="space-y-4 flex-grow pt-0 pb-4">
-                 <Separator />
+                 
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                       <ClipboardList className="h-4 w-4 text-gray-600"/>
