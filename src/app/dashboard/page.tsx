@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
 // Mock data for students and academic period
@@ -77,10 +77,16 @@ export default function DashboardPage() {
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-start justify-between pb-4 border-b">
-                <div className="flex-1">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
+                 <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.name} />
+                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
                     <CardTitle className="text-xl">{student.name}</CardTitle>
                     <CardDescription>{student.class}</CardDescription>
+                  </div>
                 </div>
                  <Badge variant="outline" className={`ml-2 shrink-0 ${badgeInfo.className}`}>
                       {badgeInfo.text}
