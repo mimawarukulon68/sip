@@ -146,7 +146,7 @@ export default function DashboardPage() {
                 </div>
                  <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary/90 hover:bg-primary/5">
                     <History className="mr-2 h-4 w-4" />
-                    Lihat Riwayat Lengkap
+                    Lihat Riwayat
                 </Button>
               </CardFooter>
             </Card>
