@@ -86,7 +86,7 @@ export default function DashboardPage() {
         </div>
 
         <Card className="p-6 bg-card">
-             <h3 className="text-lg font-semibold mb-4">Periode Laporan Akademik</h3>
+             <h3 className="text-lg font-semibold mb-4">Periode Akademik</h3>
             <div className="flex flex-col md:flex-row gap-4 items-center">
                 <div className="flex-1 w-full">
                     <p className="text-sm font-medium mb-2 text-card-foreground">Tahun Ajaran</p>
