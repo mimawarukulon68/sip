@@ -1,6 +1,7 @@
 
 "use client";
 import Link from "next/link";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,6 +55,11 @@ const students = [
   },
 ];
 
+const academicPeriods = {
+  "2025/2026": ["Semester 1", "Semester 2", "Tengah Semester 1", "Tengah Semester 2", "Satu Tahun Ajaran"],
+  "2024/2025": ["Semester 1", "Semester 2", "Tengah Semester 1", "Tengah Semester 2", "Satu Tahun Ajaran"],
+};
+
 const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
     if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
     if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
@@ -56,6 +70,8 @@ const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
 
 export default function DashboardPage() {
   const parentName = "Wali Murid"; // This would be dynamic based on logged in user
+  const [selectedYear, setSelectedYear] = React.useState("2025/2026");
+  const [selectedPeriod, setSelectedPeriod] = React.useState("Semester 1");
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -68,6 +84,42 @@ export default function DashboardPage() {
             Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di sini.
           </p>
         </div>
+
+        <Card className="p-4 bg-card">
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="flex-1 w-full">
+                    <p className="text-sm font-medium mb-2 text-card-foreground">Tahun Ajaran</p>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih tahun ajaran" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                {Object.keys(academicPeriods).map(year => (
+                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="flex-1 w-full">
+                    <p className="text-sm font-medium mb-2 text-card-foreground">Periode Laporan</p>
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih periode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                {(academicPeriods[selectedYear as keyof typeof academicPeriods] || []).map(period => (
+                                    <SelectItem key={period} value={period}>{period}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        </Card>
+
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
@@ -163,3 +215,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
