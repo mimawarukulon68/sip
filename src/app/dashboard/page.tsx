@@ -88,10 +88,12 @@ export default function DashboardPage() {
                     <CardDescription>{student.class}</CardDescription>
                   </div>
                 </div>
-                 <Badge variant="outline" className={`ml-2 shrink-0 ${badgeInfo.className}`}>
-                      {badgeInfo.text}
-                 </Badge>
               </CardHeader>
+               <div className="p-4 pt-4 pb-0">
+                  <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
+                        {badgeInfo.text}
+                  </Badge>
+                </div>
               <CardContent className="space-y-4 flex-grow pt-4 pb-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
