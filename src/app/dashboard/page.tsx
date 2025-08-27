@@ -84,7 +84,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Sistem Perizinan Siswa</h1>
-                        <p className="text-xs sm:text-sm text-gray-600">Dashboard Orang Tua - {parentName}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Dashboard Orang Tua/Wali Murid</p>
                     </div>
                 </div>
                 <Button variant="outline" size="sm" className="text-xs px-2 h-9">
@@ -235,5 +235,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
