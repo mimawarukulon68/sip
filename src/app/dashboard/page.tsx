@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, ClipboardList, User, LogOut } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
@@ -88,7 +88,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center h-14 sm:h-16">
                 <div className="flex items-center">
                     <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center mr-2">
-                        <ClipboardList className="w-4 h-4 text-primary-foreground" />
+                        <FileSignature className="w-4 h-4 text-primary-foreground" />
                     </div>
                     <div>
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Sistem Perizinan Siswa</h1>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
               <CardContent className="space-y-4 flex-grow pt-4 pb-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                      <ClipboardList className="h-4 w-4 text-gray-600"/>
+                      <FileSignature className="h-4 w-4 text-gray-600"/>
                       Ringkasan Perizinan Siswa
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
