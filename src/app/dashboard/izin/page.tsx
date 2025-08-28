@@ -69,7 +69,8 @@ export default function PermissionFormPage() {
   const studentId = searchParams.get("studentId");
   const student = students.find((s) => s.id === Number(studentId));
   const { toast } = useToast();
-  
+  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false); // State to control Popover
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -106,6 +107,7 @@ export default function PermissionFormPage() {
         return;
     }
     form.setValue("startDate", date);
+    setIsPopoverOpen(false); // Close the popover after selecting a date
   }
 
   const whatsappMessage = React.useMemo(() => {
@@ -283,7 +285,7 @@ export default function PermissionFormPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Tanggal Mulai</FormLabel>
-                        <Popover>
+                        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
