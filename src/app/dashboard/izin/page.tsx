@@ -321,14 +321,24 @@ export default function PermissionFormPage() {
                     control={form.control}
                     name="endDate"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Tanggal Selesai</FormLabel>
                         <FormControl>
-                          <Input
-                            value={field.value ? format(field.value, "d MMMM yyyy", { locale: id }) : ""}
-                            readOnly
-                            className="bg-muted/50"
-                          />
+                           <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal bg-muted/50",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            disabled
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? (
+                              format(field.value, "d MMMM yyyy", { locale: id })
+                            ) : (
+                              <span>Otomatis terisi</span>
+                            )}
+                          </Button>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -393,5 +403,3 @@ export default function PermissionFormPage() {
     </div>
   );
 }
-
-    
