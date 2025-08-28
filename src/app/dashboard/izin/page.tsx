@@ -142,6 +142,7 @@ export default function PermissionFormPage() {
     message += `\n\nAtas perhatian Bapak/Ibu Guru, kami ucapkan terima kasih.\nWassalamu'alaikum Wr. Wb.`;
 
     return message;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.watch()]);
 
 
@@ -335,7 +336,7 @@ export default function PermissionFormPage() {
                            <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal"
+                              "w-full justify-start text-left font-normal opacity-100"
                             )}
                             disabled
                           >
