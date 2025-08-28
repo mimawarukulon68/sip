@@ -336,9 +336,8 @@ export default function PermissionFormPage() {
                            <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal opacity-100"
+                              "w-full justify-start text-left font-normal pointer-events-none bg-background"
                             )}
-                            disabled
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? (
@@ -411,5 +410,3 @@ export default function PermissionFormPage() {
     </div>
   );
 }
-
-    
