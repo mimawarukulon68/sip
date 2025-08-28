@@ -115,16 +115,15 @@ export default function PermissionFormPage() {
     }
 
     const durationDays = parseInt(values.duration, 10);
-    const startDateFormatted = format(values.startDate, "d MMMM yyyy", { locale: id });
+    const startDateFormatted = format(values.startDate, "EEEE, d MMMM yyyy", { locale: id });
 
     let message: string;
 
     if(durationDays === 1){
-         message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama 1 hari, hari ini tanggal ${startDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+         message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah pada hari ini, ${startDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
     } else {
-        const endDateFormatted = format(values.endDate, "d MMM yyyy", { locale: id });
-        const startDateShort = format(values.startDate, "d MMM", { locale: id });
-        message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama ${durationDays} hari, dari tanggal ${startDateShort} s.d. ${endDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+        const endDateFormatted = format(values.endDate, "EEEE, d MMMM yyyy", { locale: id });
+        message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama ${durationDays} hari, dari tanggal ${startDateFormatted} s.d. ${endDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
     }
     
     if(values.reasonText) {
@@ -296,7 +295,7 @@ export default function PermissionFormPage() {
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {field.value ? (
-                                  format(field.value, "d MMMM yyyy", { locale: id })
+                                  format(field.value, "EEEE, d MMMM yyyy", { locale: id })
                                 ) : (
                                   <span>Pilih tanggal</span>
                                 )}
@@ -334,7 +333,7 @@ export default function PermissionFormPage() {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? (
-                              format(field.value, "d MMMM yyyy", { locale: id })
+                              format(field.value, "EEEE, d MMMM yyyy", { locale: id })
                             ) : (
                               <span>Otomatis terisi</span>
                             )}
