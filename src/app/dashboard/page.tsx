@@ -233,7 +233,7 @@ export default function DashboardPage() {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Perpanjang
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button size="sm" className="flex-1">
                         <Check className="mr-2 h-4 w-4" />
                         Sudah Masuk
                         </Button>
@@ -269,5 +269,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
