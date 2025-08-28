@@ -158,7 +158,7 @@ export default function PermissionFormPage() {
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
        <header className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
+          <div className="flex items-center h-14 sm:h-16">
             <Link href="/dashboard" className="mr-4">
                <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-5 w-5" />
@@ -393,3 +393,5 @@ export default function PermissionFormPage() {
     </div>
   );
 }
+
+    
