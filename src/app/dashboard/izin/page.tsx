@@ -78,13 +78,19 @@ export default function PermissionFormPage() {
       studentClass: student?.class || "",
       reasonType: "Sakit",
       duration: "1",
-      startDate: new Date(),
       reasonText: "",
     },
   });
 
   const watchDuration = form.watch("duration");
   const watchStartDate = form.watch("startDate");
+
+  React.useEffect(() => {
+    // Set start date on client side to avoid hydration error
+    if (!form.getValues("startDate")) {
+      form.setValue("startDate", new Date());
+    }
+  }, [form]);
 
   React.useEffect(() => {
     if (watchStartDate && watchDuration) {
