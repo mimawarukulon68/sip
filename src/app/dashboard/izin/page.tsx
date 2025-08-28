@@ -328,7 +328,7 @@ export default function PermissionFormPage() {
                            <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal bg-muted/50",
+                              "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             disabled
@@ -404,3 +404,5 @@ export default function PermissionFormPage() {
     </div>
   );
 }
+
+    
