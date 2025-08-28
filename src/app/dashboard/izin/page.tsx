@@ -78,6 +78,7 @@ export default function PermissionFormPage() {
       studentClass: student?.class || "",
       reasonType: "Sakit",
       duration: "1",
+      startDate: undefined, // Initialize as undefined to prevent hydration error
       reasonText: "",
     },
   });
@@ -334,8 +335,7 @@ export default function PermissionFormPage() {
                            <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "w-full justify-start text-left font-normal"
                             )}
                             disabled
                           >
