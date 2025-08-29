@@ -28,8 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format, differenceInCalendarDays } from "date-fns";
+import { id } from "date-fns/locale";
 
 
 // Mock data for students and academic period
@@ -47,7 +49,9 @@ const students = [
     class: "Kelas 2",
     permissionStatus: {
       status: "Sakit",
+      startDate: "2024-08-24",
       endDate: "2024-08-25",
+      reasonText: "Demam dan batuk pilek.",
     },
     attendance: { sakit: { count: 1, days: 2 }, izin: { count: 0, days: 0 } },
   },
@@ -57,7 +61,9 @@ const students = [
     class: "Kelas 6",
     permissionStatus: {
       status: "Izin",
+      startDate: "2024-08-22",
       endDate: "2024-08-24",
+      reasonText: "Acara keluarga di luar kota.",
     },
     attendance: { sakit: { count: 0, days: 0 }, izin: { count: 3, days: 5 } },
   },
@@ -68,7 +74,7 @@ const academicPeriods = {
   "2024/2025": ["Semester 1", "Semester 2", "Tengah Semester 1", "Tengah Semester 2", "Satu Tahun Ajaran"],
 };
 
-const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
+const getBadgeInfo = (status: {status: string} | null) => {
     if (!status) return { text: "Tidak Ada Izin Aktif", className: "bg-green-100 text-green-800 border-green-200" };
     if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
     if (status.status.toLowerCase() === 'izin') return { text: "Izin", className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
@@ -199,6 +205,19 @@ export default function DashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
+                  {student.permissionStatus && (
+                     <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                        <p className="font-semibold text-slate-800">
+                           {format(new Date(student.permissionStatus.startDate), "d MMMM", { locale: id })} - {format(new Date(student.permissionStatus.endDate), "d MMMM yyyy", { locale: id })} 
+                           <span className="font-normal"> ({differenceInCalendarDays(new Date(student.permissionStatus.endDate), new Date(student.permissionStatus.startDate)) + 1} hari)</span>
+                        </p>
+                        {student.permissionStatus.reasonText && (
+                            <p className="mt-1 italic">
+                                "{student.permissionStatus.reasonText}"
+                            </p>
+                        )}
+                     </div>
+                  )}
                 </div>
               <CardContent className="space-y-4 flex-grow pt-4 pb-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
@@ -269,3 +288,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
