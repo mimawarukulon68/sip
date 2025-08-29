@@ -130,7 +130,7 @@ export default function DashboardPage() {
       </header>
       <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             Selamat Datang Bapak/Ibu Wali Murid
           </h1>
           <p className="text-muted-foreground">
