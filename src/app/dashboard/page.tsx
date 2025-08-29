@@ -85,7 +85,6 @@ const getBadgeInfo = (status: {status: string} | null) => {
 export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = React.useState("2025/2026");
   const [selectedPeriod, setSelectedPeriod] = React.useState("Semester 1");
-  const parentName = "Wali Murid"; // Placeholder name
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -105,15 +104,15 @@ export default function DashboardPage() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                        <Avatar className="h-10 w-10">
-                         <AvatarImage src="https://i.pravatar.cc/150?u=parent" alt={parentName} />
-                         <AvatarFallback>{parentName.charAt(0)}</AvatarFallback>
+                         <AvatarImage src="https://i.pravatar.cc/150?u=parent" alt={"Wali Murid"} />
+                         <AvatarFallback>{"W".charAt(0)}</AvatarFallback>
                        </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{parentName}</p>
+                        <p className="text-sm font-medium leading-none">Wali Murid</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           wali.murid@example.com
                         </p>
@@ -288,5 +287,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
