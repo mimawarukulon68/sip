@@ -77,9 +77,9 @@ const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
 
 
 export default function DashboardPage() {
-  const parentName = "Budi Santoso"; // This would be dynamic based on logged in user
   const [selectedYear, setSelectedYear] = React.useState("2025/2026");
   const [selectedPeriod, setSelectedPeriod] = React.useState("Semester 1");
+  const parentName = "Wali Murid"; // Placeholder name
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -131,7 +131,7 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
         <div className="mb-4">
           <h1 className="text-3xl font-bold tracking-tight">
-            Selamat Datang Bapak/Ibu {parentName}
+            Selamat Datang Bapak/Ibu Wali Murid
           </h1>
           <p className="text-muted-foreground">
             Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di sini.
