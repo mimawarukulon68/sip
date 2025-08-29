@@ -69,7 +69,7 @@ const academicPeriods = {
 };
 
 const getBadgeInfo = (status: {status: string, endDate: string} | null) => {
-    if (!status) return { text: "Aktif Masuk", className: "bg-green-100 text-green-800 border-green-200" };
+    if (!status) return { text: "Tidak Ada Izin Aktif", className: "bg-green-100 text-green-800 border-green-200" };
     if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
     if (status.status.toLowerCase() === 'izin') return { text: "Izin", className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
     return { text: "Status Tidak Diketahui", className: "bg-gray-100 text-gray-800 border-gray-200" };
