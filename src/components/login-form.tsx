@@ -26,6 +26,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase-client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -35,7 +39,11 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = React.useState(false);
+  const [loginError, setLoginError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,11 +54,34 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Auth logic will be added here in the future.
-    console.log(values);
-    // For demonstration purposes, we'll navigate to the dashboard.
-    router.push("/dashboard");
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    setLoginError(null);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+       setLoginError(error.message);
+       toast({
+        variant: "destructive",
+        title: "Login Gagal",
+        description: "Email atau password yang Anda masukkan salah.",
+      });
+      return;
+    }
+
+    if (data.user) {
+        toast({
+            title: "Login Berhasil",
+            description: "Anda akan diarahkan ke dasbor.",
+        });
+        router.push("/dashboard");
+    }
   }
 
   return (
@@ -69,6 +100,15 @@ export function LoginForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             {loginError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  Email atau password salah. Silakan coba lagi.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -154,8 +194,8 @@ export function LoginForm() {
                   Lupa Password?
                 </Link>
             </div>
-            <Button type="submit" className="w-full text-base font-semibold py-6 bg-primary hover:bg-primary/90">
-              Login
+            <Button type="submit" className="w-full text-base font-semibold py-6 bg-primary hover:bg-primary/90" disabled={isLoading}>
+              {isLoading ? 'Memproses...' : 'Login'}
             </Button>
           </form>
         </Form>
