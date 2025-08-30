@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
@@ -33,6 +33,11 @@ type ParentProfile = {
     full_name: string;
     email?: string;
 };
+
+type AcademicPeriod = {
+    period_name: string;
+    academic_year: string;
+}
 
 type StudentData = {
     id: string;
@@ -62,16 +67,19 @@ export default function ParentDashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = React.useState<ParentProfile | null>(null);
   const [students, setStudents] = React.useState<StudentData[]>([]);
+  const [academicPeriod, setAcademicPeriod] = React.useState<AcademicPeriod | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     async function fetchProfileAndStudents() {
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             router.replace("/");
             return;
         }
 
+        // Fetch parent profile
         const { data: parentProfile, error: profileError } = await supabase
             .from('parent_profiles')
             .select('*')
@@ -80,10 +88,10 @@ export default function ParentDashboardPage() {
         
         if (profileError || !parentProfile) {
             console.error("Not a parent or error fetching profile, redirecting...");
-            router.replace("/dashboard");
+            await supabase.auth.signOut();
+            router.replace("/?error=no_parent_profile");
             return;
         }
-
         setProfile({ ...parentProfile, email: user.email });
 
         // Fetch students related to this parent
@@ -94,13 +102,10 @@ export default function ParentDashboardPage() {
 
         if (relationsError) {
             console.error("Error fetching student relations:", relationsError);
-            setLoading(false);
-            return;
         }
 
-        const studentIds = studentRelations.map(r => r.student_id);
-
-        if (studentIds.length > 0) {
+        if (studentRelations && studentRelations.length > 0) {
+            const studentIds = studentRelations.map(r => r.student_id);
             const { data: studentData, error: studentsError } = await supabase
                 .from('students')
                 .select(`
@@ -124,6 +129,20 @@ export default function ParentDashboardPage() {
                 setStudents(studentData as StudentData[]);
             }
         }
+        
+        // Fetch current academic period
+        const today = new Date().toISOString().split('T')[0];
+        const { data: periodData, error: periodError } = await supabase
+            .from('academic_periods')
+            .select('period_name, academic_year')
+            .lte('start_date', today)
+            .gte('end_date', today)
+            .single();
+
+        if (periodData) {
+            setAcademicPeriod(periodData);
+        }
+
         setLoading(false);
     }
 
@@ -153,6 +172,10 @@ export default function ParentDashboardPage() {
                  <div className="mb-4">
                     <Skeleton className="h-8 w-1/2 mb-2" />
                     <Skeleton className="h-4 w-3/4" />
+                </div>
+                 <div className="border rounded-xl p-4 bg-card shadow-sm mb-4">
+                    <Skeleton className="h-5 w-48 mb-2" />
+                    <Skeleton className="h-4 w-32" />
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {[1, 2].map(i => (
@@ -241,12 +264,29 @@ export default function ParentDashboardPage() {
           </p>
         </div>
 
+        {academicPeriod && (
+             <div className="border rounded-xl p-4 bg-card shadow-sm flex items-center gap-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+                <div>
+                    <h2 className="font-semibold text-gray-800">Periode Akademik Saat Ini</h2>
+                    <p className="text-sm text-muted-foreground">{academicPeriod.period_name} - T.A. {academicPeriod.academic_year}</p>
+                </div>
+            </div>
+        )}
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
               const activeLeave = student.leave_requests.find(lr => lr.status === 'AKTIF');
               const badgeInfo = getBadgeInfo(activeLeave);
-              const sakitAttendance = student.leave_requests.filter(lr => lr.leave_type === 'Sakit');
-              const izinAttendance = student.leave_requests.filter(lr => lr.leave_type === 'Izin');
+              
+              const filteredRequests = student.leave_requests.filter(lr => {
+                  if (!academicPeriod) return true; // Show all if no period is active
+                  // A simple date check can be added here if needed, e.g., using start_date of leave
+                  return true; // For now, show all requests within the app's scope
+              });
+
+              const sakitAttendance = filteredRequests.filter(lr => lr.leave_type === 'Sakit');
+              const izinAttendance = filteredRequests.filter(lr => lr.leave_type === 'Izin');
               
               const totalSakitDays = sakitAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
               const totalIzinDays = izinAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
