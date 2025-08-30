@@ -282,23 +282,14 @@ export default function ParentDashboardPage() {
             </div>
         </div>
       </header>
-      <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Selamat Datang Bapak/Ibu Wali Murid
-          </h1>
-          <p className="text-muted-foreground">
-            Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di sini.
-          </p>
-        </div>
-
+      <main className="flex flex-1 flex-col gap-4 p-4 md:p-8">
         <Card className="shadow-sm">
-            <CardHeader>
+            <CardHeader className="p-4">
                 <CardTitle className="flex items-center gap-3 text-lg">
                     <BookOpen className="h-6 w-6 text-primary" />
-                    <span>Filter Periode Akademik</span>
+                    <span>Periode Akademik</span>
                 </CardTitle>
-                <CardDescription>
+                 <CardDescription>
                     {currentAcademicPeriod ? (
                         <span>
                             Periode aktif saat ini adalah <strong>{currentAcademicPeriod.period_name}</strong> TA <strong>{currentAcademicPeriod.academic_year}</strong>.
@@ -308,7 +299,7 @@ export default function ParentDashboardPage() {
                     )}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                     <label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</label>
                     <Select onValueChange={handleYearChange} value={selectedAcademicYear || ''}>
@@ -327,7 +318,7 @@ export default function ParentDashboardPage() {
                     <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
                         <SelectTrigger id="academic-period">
                             <SelectValue placeholder="Pilih Periode" />
-                        </SelectTrigger>
+                        </Trigger>
                         <SelectContent>
                             {periodsForSelectedYear.map(period => (
                                 <SelectItem key={period.id} value={period.id}>{period.period_name}</SelectItem>
@@ -360,7 +351,7 @@ export default function ParentDashboardPage() {
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b p-4">
                  <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.full_name} />
@@ -390,7 +381,7 @@ export default function ParentDashboardPage() {
                      </div>
                   )}
                 </div>
-              <CardContent className="space-y-4 flex-grow pt-4 pb-4">
+              <CardContent className="space-y-4 flex-grow pt-4 pb-4 p-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                       <FileSignature className="h-4 w-4 text-gray-600"/>
@@ -459,3 +450,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
