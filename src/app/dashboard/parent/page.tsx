@@ -21,10 +21,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -35,8 +42,11 @@ type ParentProfile = {
 };
 
 type AcademicPeriod = {
+    id: string;
     period_name: string;
     academic_year: string;
+    start_date: string;
+    end_date: string;
 }
 
 type StudentData = {
@@ -67,11 +77,26 @@ export default function ParentDashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = React.useState<ParentProfile | null>(null);
   const [students, setStudents] = React.useState<StudentData[]>([]);
-  const [academicPeriod, setAcademicPeriod] = React.useState<AcademicPeriod | null>(null);
+  const [allAcademicPeriods, setAllAcademicPeriods] = React.useState<AcademicPeriod[]>([]);
+  const [currentAcademicPeriod, setCurrentAcademicPeriod] = React.useState<AcademicPeriod | null>(null);
+  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState<string | null>(null);
+  const [selectedPeriodId, setSelectedPeriodId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  
+  // Derived state for filtering dropdowns
+  const availableYears = React.useMemo(() => {
+    const years = new Set(allAcademicPeriods.map(p => p.academic_year));
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [allAcademicPeriods]);
+  
+  const periodsForSelectedYear = React.useMemo(() => {
+    if (!selectedAcademicYear) return [];
+    return allAcademicPeriods.filter(p => p.academic_year === selectedAcademicYear);
+  }, [allAcademicPeriods, selectedAcademicYear]);
+
 
   React.useEffect(() => {
-    async function fetchProfileAndStudents() {
+    async function fetchProfileAndData() {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -79,7 +104,6 @@ export default function ParentDashboardPage() {
             return;
         }
 
-        // Fetch parent profile
         const { data: parentProfile, error: profileError } = await supabase
             .from('parent_profiles')
             .select('*')
@@ -94,14 +118,37 @@ export default function ParentDashboardPage() {
         }
         setProfile({ ...parentProfile, email: user.email });
 
-        // Fetch students related to this parent
-        const { data: studentRelations, error: relationsError } = await supabase
+        const studentRelationsPromise = supabase
             .from('student_parents')
             .select('student_id')
             .eq('parent_profile_id', parentProfile.id);
 
-        if (relationsError) {
-            console.error("Error fetching student relations:", relationsError);
+        const academicPeriodsPromise = supabase
+            .from('academic_periods')
+            .select('*')
+            .order('start_date', { ascending: false });
+
+        const [{ data: studentRelations, error: relationsError }, { data: periodsData, error: periodsError }] = await Promise.all([
+            studentRelationsPromise, 
+            academicPeriodsPromise
+        ]);
+
+        if (relationsError) console.error("Error fetching student relations:", relationsError);
+        if (periodsError) console.error("Error fetching academic periods:", periodsError);
+
+        if (periodsData) {
+            setAllAcademicPeriods(periodsData);
+            const today = new Date();
+            const activePeriod = periodsData.find(p => isWithinInterval(today, { start: parseISO(p.start_date), end: parseISO(p.end_date) })) || null;
+            setCurrentAcademicPeriod(activePeriod);
+            if (activePeriod) {
+                setSelectedAcademicYear(activePeriod.academic_year);
+                setSelectedPeriodId(activePeriod.id);
+            } else if (periodsData.length > 0) {
+                 const latestPeriod = periodsData[0];
+                 setSelectedAcademicYear(latestPeriod.academic_year);
+                 setSelectedPeriodId(latestPeriod.id);
+            }
         }
 
         if (studentRelations && studentRelations.length > 0) {
@@ -111,42 +158,19 @@ export default function ParentDashboardPage() {
                 .select(`
                     id,
                     full_name,
-                    classes (
-                        class_name
-                    ),
-                    leave_requests (
-                        id,
-                        leave_type,
-                        start_date,
-                        end_date,
-                        reason,
-                        status
-                    )
+                    classes ( class_name ),
+                    leave_requests ( id, leave_type, start_date, end_date, reason, status )
                 `)
                 .in('id', studentIds);
             
-            if (studentData) {
-                setStudents(studentData as StudentData[]);
-            }
+            if (studentData) setStudents(studentData as StudentData[]);
+            if (studentsError) console.error("Error fetching student data:", studentsError);
         }
         
-        // Fetch current academic period
-        const today = new Date().toISOString().split('T')[0];
-        const { data: periodData, error: periodError } = await supabase
-            .from('academic_periods')
-            .select('period_name, academic_year')
-            .lte('start_date', today)
-            .gte('end_date', today)
-            .single();
-
-        if (periodData) {
-            setAcademicPeriod(periodData);
-        }
-
         setLoading(false);
     }
 
-    fetchProfileAndStudents();
+    fetchProfileAndData();
   }, [router]);
 
   const handleLogout = async () => {
@@ -154,6 +178,13 @@ export default function ParentDashboardPage() {
     router.replace("/");
   };
   
+  const handleYearChange = (year: string) => {
+    setSelectedAcademicYear(year);
+    // Auto-select the first period of the new year
+    const firstPeriod = allAcademicPeriods.find(p => p.academic_year === year);
+    if(firstPeriod) setSelectedPeriodId(firstPeriod.id);
+  }
+
   if (loading) {
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -173,10 +204,7 @@ export default function ParentDashboardPage() {
                     <Skeleton className="h-8 w-1/2 mb-2" />
                     <Skeleton className="h-4 w-3/4" />
                 </div>
-                 <div className="border rounded-xl p-4 bg-card shadow-sm mb-4">
-                    <Skeleton className="h-5 w-48 mb-2" />
-                    <Skeleton className="h-4 w-32" />
-                </div>
+                 <Skeleton className="h-28 w-full rounded-xl" />
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {[1, 2].map(i => (
                         <Card key={i} className="shadow-md rounded-xl flex flex-col">
@@ -264,26 +292,60 @@ export default function ParentDashboardPage() {
           </p>
         </div>
 
-        {academicPeriod && (
-             <div className="border rounded-xl p-4 bg-card shadow-sm flex items-center gap-4">
-                <BookOpen className="h-6 w-6 text-primary" />
+        <Card className="shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-lg">
+                    <BookOpen className="h-6 w-6 text-primary" />
+                    <span>Filter Periode Akademik</span>
+                </CardTitle>
+                <CardDescription>
+                    Pilih tahun ajaran dan periode untuk melihat ringkasan perizinan yang sesuai. 
+                    {currentAcademicPeriod ? ` Periode aktif saat ini adalah ${currentAcademicPeriod.period_name} - T.A. ${currentAcademicPeriod.academic_year}.` : ' Saat ini tidak ada periode akademik yang aktif.'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <h2 className="font-semibold text-gray-800">Periode Akademik Saat Ini</h2>
-                    <p className="text-sm text-muted-foreground">{academicPeriod.period_name} - T.A. {academicPeriod.academic_year}</p>
+                    <label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</label>
+                    <Select onValueChange={handleYearChange} value={selectedAcademicYear || ''}>
+                        <SelectTrigger id="academic-year">
+                            <SelectValue placeholder="Pilih Tahun Ajaran" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-            </div>
-        )}
+                <div>
+                     <label htmlFor="academic-period" className="text-sm font-medium mb-2 block">Periode</label>
+                    <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
+                        <SelectTrigger id="academic-period">
+                            <SelectValue placeholder="Pilih Periode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {periodsForSelectedYear.map(period => (
+                                <SelectItem key={period.id} value={period.id}>{period.period_name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardContent>
+        </Card>
+
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
               const activeLeave = student.leave_requests.find(lr => lr.status === 'AKTIF');
               const badgeInfo = getBadgeInfo(activeLeave);
               
-              const filteredRequests = student.leave_requests.filter(lr => {
-                  if (!academicPeriod) return true; // Show all if no period is active
-                  // A simple date check can be added here if needed, e.g., using start_date of leave
-                  return true; // For now, show all requests within the app's scope
-              });
+              const selectedPeriod = allAcademicPeriods.find(p => p.id === selectedPeriodId);
+              
+              const filteredRequests = selectedPeriod ? student.leave_requests.filter(lr => {
+                  const leaveStartDate = parseISO(lr.start_date);
+                  const periodInterval = { start: parseISO(selectedPeriod.start_date), end: parseISO(selectedPeriod.end_date) };
+                  return isWithinInterval(leaveStartDate, periodInterval);
+              }) : [];
 
               const sakitAttendance = filteredRequests.filter(lr => lr.leave_type === 'Sakit');
               const izinAttendance = filteredRequests.filter(lr => lr.leave_type === 'Izin');
