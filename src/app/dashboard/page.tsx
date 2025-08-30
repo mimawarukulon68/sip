@@ -1,289 +1,94 @@
 
 "use client";
-import Link from "next/link";
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, Info } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays } from "date-fns";
-import { id } from "date-fns/locale";
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase-client';
+import { Skeleton } from "@/components/ui/skeleton";
+import { FileSignature } from 'lucide-react';
 
-// Mock data for students and academic period
-const students = [
-  {
-    id: 1,
-    name: "MOCHAMMAD ALIFIKUROFIQ YAZIZ ABDULLAH",
-    class: "Kelas 4",
-    permissionStatus: null,
-    attendance: { sakit: { count: 2, days: 3 }, izin: { count: 1, days: 1 } },
-  },
-  {
-    id: 2,
-    name: "Citra Dewi",
-    class: "Kelas 2",
-    permissionStatus: {
-      status: "Sakit",
-      startDate: "2024-08-24",
-      endDate: "2024-08-25",
-      reasonText: "Demam dan batuk pilek.",
-    },
-    attendance: { sakit: { count: 1, days: 2 }, izin: { count: 0, days: 0 } },
-  },
-   {
-    id: 3,
-    name: "Eka Fitri",
-    class: "Kelas 6",
-    permissionStatus: {
-      status: "Izin",
-      startDate: "2024-08-22",
-      endDate: "2024-08-24",
-      reasonText: "Acara keluarga di luar kota.",
-    },
-    attendance: { sakit: { count: 0, days: 0 }, izin: { count: 3, days: 5 } },
-  },
-];
+type UserRole = 'admin' | 'teacher' | 'parent' | null;
 
-const academicPeriods = {
-  "2025/2026": ["Semester 1", "Semester 2", "Tengah Semester 1", "Tengah Semester 2", "Satu Tahun Ajaran"],
-  "2024/2025": ["Semester 1", "Semester 2", "Tengah Semester 1", "Tengah Semester 2", "Satu Tahun Ajaran"],
-};
+export default function DashboardRedirectPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-const getBadgeInfo = (status: {status: string} | null) => {
-    if (!status) return { text: "Tidak Ada Izin Aktif", className: "bg-green-100 text-green-800 border-green-200" };
-    if (status.status.toLowerCase() === 'sakit') return { text: "Sakit", className: "bg-red-100 text-red-800 border-red-200" };
-    if (status.status.toLowerCase() === 'izin') return { text: "Izin", className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
-    return { text: "Status Tidak Diketahui", className: "bg-gray-100 text-gray-800 border-gray-200" };
-}
+  useEffect(() => {
+    async function getUserAndRedirect() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.replace('/');
+        return;
+      }
 
+      let role: UserRole = null;
+      let profile: any = null;
 
-export default function DashboardPage() {
-  const [selectedYear, setSelectedYear] = React.useState("2025/2026");
-  const [selectedPeriod, setSelectedPeriod] = React.useState("Semester 1");
+      // 1. Check for admin
+      const { data: adminProfile } = await supabase
+        .from('admin_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (adminProfile) {
+        role = 'admin';
+        profile = adminProfile;
+      }
+
+      // 2. Check for teacher
+      if (!role) {
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (teacherProfile) {
+          role = 'teacher';
+          profile = teacherProfile;
+        }
+      }
+
+      // 3. Check for parent
+      if (!role) {
+        const { data: parentProfile } = await supabase
+          .from('parent_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (parentProfile) {
+          role = 'parent';
+          profile = parentProfile;
+        }
+      }
+      
+      setLoading(false);
+
+      if (role) {
+        router.replace(`/dashboard/${role}`);
+      } else {
+        // Handle user with no profile
+        console.error("User has no profile role assigned.");
+        await supabase.auth.signOut();
+        router.replace('/?error=no_role');
+      }
+    }
+
+    getUserAndRedirect();
+  }, [router]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/10">
-       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-14 sm:h-16">
-                <div className="flex items-center">
-                    <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center mr-2">
-                        <FileSignature className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                    <div>
-                        <h1 className="text-base sm:text-lg font-semibold text-gray-900">Sistem Perizinan Siswa</h1>
-                        <p className="text-xs sm:text-sm text-gray-600">Dashboard Orang Tua/Wali Murid</p>
-                    </div>
-                </div>
-                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                       <Avatar className="h-10 w-10">
-                         <AvatarImage src="https://i.pravatar.cc/150?u=parent" alt={"Wali Murid"} />
-                         <AvatarFallback>{"W".charAt(0)}</AvatarFallback>
-                       </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">Wali Murid</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          wali.murid@example.com
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profil</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Keluar</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/10">
+        <div className="flex flex-col items-center gap-4">
+             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                <FileSignature className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <p className="text-lg font-semibold text-muted-foreground">Mengarahkan ke dasbor Anda...</p>
+            <div className="w-64 mt-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4 mt-2" />
             </div>
         </div>
-      </header>
-      <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Selamat Datang Bapak/Ibu Wali Murid
-          </h1>
-          <p className="text-muted-foreground">
-            Kelola perizinan dan pantau ringkasan absensi putra/putri Anda di sini.
-          </p>
-        </div>
-
-        <Card className="p-6 bg-card">
-             <h3 className="text-lg font-semibold mb-4">Periode Akademik</h3>
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-                <div className="flex-1 w-full">
-                    <p className="text-sm font-medium mb-2 text-card-foreground">Tahun Ajaran</p>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Pilih tahun ajaran" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                {Object.keys(academicPeriods).map(year => (
-                                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="flex-1 w-full">
-                    <p className="text-sm font-medium mb-2 text-card-foreground">Periode Laporan</p>
-                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Pilih periode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                {(academicPeriods[selectedYear as keyof typeof academicPeriods] || []).map(period => (
-                                    <SelectItem key={period} value={period}>{period}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-        </Card>
-
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {students.map((student) => {
-              const badgeInfo = getBadgeInfo(student.permissionStatus);
-              const totalIzinCount = student.attendance.sakit.count + student.attendance.izin.count;
-              const totalIzinDays = student.attendance.sakit.days + student.attendance.izin.days;
-
-            return (
-            <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-                 <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.name} />
-                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-base">{student.name}</CardTitle>
-                    <CardDescription>{student.class}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-               <div className="p-4 pt-4 pb-0">
-                  <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
-                        {badgeInfo.text}
-                  </Badge>
-                  {student.permissionStatus && (
-                     <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
-                        <p className="font-semibold text-slate-800">
-                           {format(new Date(student.permissionStatus.startDate), "d MMMM", { locale: id })} - {format(new Date(student.permissionStatus.endDate), "d MMMM yyyy", { locale: id })} 
-                           <span className="font-normal"> ({differenceInCalendarDays(new Date(student.permissionStatus.endDate), new Date(student.permissionStatus.startDate)) + 1} hari)</span>
-                        </p>
-                        {student.permissionStatus.reasonText && (
-                            <p className="mt-1 italic">
-                                "{student.permissionStatus.reasonText}"
-                            </p>
-                        )}
-                     </div>
-                  )}
-                </div>
-              <CardContent className="space-y-4 flex-grow pt-4 pb-4">
-                 <div className="border bg-slate-50/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                      <FileSignature className="h-4 w-4 text-gray-600"/>
-                      Ringkasan Perizinan Siswa
-                    </h4>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-3">
-                            <div className="bg-red-50 rounded-lg p-3">
-                                <div className="text-xs text-red-600">Sakit</div>
-                                <div className="text-sm font-semibold text-red-700">{student.attendance.sakit.count} kali ({student.attendance.sakit.days} hari)</div>
-                            </div>
-                            <div className="bg-yellow-50 rounded-lg p-3">
-                                <div className="text-xs text-yellow-600">Izin</div>
-                                <div className="text-sm font-semibold text-yellow-700">{student.attendance.izin.count} kali ({student.attendance.izin.days} hari)</div>
-                            </div>
-                        </div>
-                         <div className="bg-slate-100 rounded-lg p-3 flex flex-col justify-center items-center text-center">
-                            <div className="text-xs text-slate-600">Total Izin</div>
-                            <div className="text-lg font-bold text-slate-900">{totalIzinCount} kali</div>
-                            <div className="text-sm text-slate-800">({totalIzinDays} hari)</div>
-                        </div>
-                    </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 border-t">
-                 <div className="flex gap-2 flex-wrap">
-                    {student.permissionStatus ? (
-                     <>
-                        <Button variant="outline" size="sm" className="flex-1">
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Perpanjang
-                        </Button>
-                        <Button size="sm" className="flex-1">
-                        <Check className="mr-2 h-4 w-4" />
-                        Sudah Masuk
-                        </Button>
-                        <Button variant="destructive" size="sm" className="flex-1">
-                        <X className="mr-2 h-4 w-4" />
-                        Batalkan
-                        </Button>
-                    </>
-                    ) : (
-                    <>
-                        <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
-                            <Button size="sm" className="w-full">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Ajukan Izin
-                            </Button>
-                        </Link>
-                         <Button variant="outline" size="sm" className="flex-1">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Izin Susulan
-                        </Button>
-                    </>
-                    )}
-                </div>
-                 <Button variant="outline" size="sm" className="w-full">
-                    <History className="mr-2 h-4 w-4" />
-                    Lihat Riwayat
-                </Button>
-              </CardFooter>
-            </Card>
-          )})}
-        </div>
-      </main>
     </div>
   );
 }

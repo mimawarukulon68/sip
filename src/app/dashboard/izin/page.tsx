@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -39,15 +39,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data for students
-const students = [
-  { id: 1, name: "Ahmad Budi", class: "Kelas 4" },
-  { id: 2, name: "Citra Dewi", class: "Kelas 2" },
-  { id: 3, name: "Eka Fitri", class: "Kelas 6" },
-];
+import { supabase } from "@/lib/supabase-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const formSchema = z.object({
+  studentId: z.string(),
   studentName: z.string(),
   studentClass: z.string(),
   reasonType: z.enum(["Sakit", "Izin"], {
@@ -64,34 +60,83 @@ const formSchema = z.object({
   document: z.any().optional(),
 });
 
+type StudentData = {
+    id: string;
+    full_name: string;
+    classes: {
+        class_name: string;
+    } | null;
+} | null;
+
+
 export default function PermissionFormPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const studentId = searchParams.get("studentId");
-  const student = students.find((s) => s.id === Number(studentId));
   const { toast } = useToast();
-  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false); // State to control Popover
+  const [student, setStudent] = React.useState<StudentData>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      studentName: student?.name || "",
-      studentClass: student?.class || "",
+      studentId: studentId || "",
+      studentName: "",
+      studentClass: "",
       reasonType: "Sakit",
       duration: "1",
-      startDate: undefined, // Initialize as undefined to prevent hydration error
+      startDate: undefined, 
       reasonText: "",
     },
   });
 
+  React.useEffect(() => {
+    if (!studentId) {
+        toast({ variant: "destructive", title: "Error", description: "ID Siswa tidak ditemukan." });
+        router.push("/dashboard");
+        return;
+    }
+
+    async function fetchStudentData() {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from("students")
+            .select(`
+                id,
+                full_name,
+                classes (
+                    class_name
+                )
+            `)
+            .eq("id", studentId)
+            .single();
+
+        if (error || !data) {
+            toast({ variant: "destructive", title: "Gagal memuat data", description: "Tidak dapat menemukan data siswa." });
+            router.push("/dashboard");
+        } else {
+            setStudent(data as StudentData);
+            form.reset({
+                studentId: data.id,
+                studentName: data.full_name,
+                studentClass: data.classes?.class_name || "Tidak ada kelas",
+                reasonType: "Sakit",
+                duration: "1",
+                startDate: new Date(),
+                reasonText: "",
+            });
+        }
+        setLoading(false);
+    }
+
+    fetchStudentData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, router, toast]);
+
+
   const watchDuration = form.watch("duration");
   const watchStartDate = form.watch("startDate");
-
-  React.useEffect(() => {
-    // Set start date on client side to avoid hydration error
-    if (!form.getValues("startDate")) {
-      form.setValue("startDate", new Date());
-    }
-  }, [form]);
 
   React.useEffect(() => {
     if (watchStartDate && watchDuration) {
@@ -104,7 +149,7 @@ export default function PermissionFormPage() {
   const handleDateSelect = (date: Date | undefined) => {
     if(!date) return;
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    today.setHours(0, 0, 0, 0); 
     if(date < today) {
         toast({
             variant: "destructive",
@@ -114,7 +159,7 @@ export default function PermissionFormPage() {
         return;
     }
     form.setValue("startDate", date);
-    setIsPopoverOpen(false); // Close the popover after selecting a date
+    setIsPopoverOpen(false); 
   }
 
   const whatsappMessage = React.useMemo(() => {
@@ -146,22 +191,75 @@ export default function PermissionFormPage() {
   }, [form.watch()]);
 
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Logic to send notification
-    toast({
-        title: "Pemberitahuan Terkirim",
-        description: "Formulir izin Anda telah berhasil dikirimkan."
-    })
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "Anda harus login untuk mengajukan izin." });
+        return;
+    }
+
+    const { error } = await supabase.from('leave_requests').insert({
+        created_by_user_id: user.id,
+        student_id: values.studentId,
+        leave_type: values.reasonType,
+        reason: values.reasonText,
+        start_date: format(values.startDate, "yyyy-MM-dd"),
+        end_date: format(values.endDate || values.startDate, "yyyy-MM-dd"),
+        status: 'AKTIF'
+    });
+
+    if (error) {
+        toast({ variant: "destructive", title: "Gagal Mengirim", description: error.message });
+    } else {
+        toast({
+            title: "Pemberitahuan Terkirim",
+            description: "Formulir izin Anda telah berhasil dikirimkan."
+        });
+        router.push("/dashboard");
+    }
+  }
+
+  if (loading) {
+    return (
+        <div className="flex min-h-screen w-full flex-col bg-muted/10">
+            <header className="bg-white shadow-sm border-b sticky top-0 z-10">
+                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center h-14 sm:h-16">
+                         <Skeleton className="h-10 w-10 mr-4" />
+                         <Skeleton className="h-6 w-48" />
+                    </div>
+                </div>
+            </header>
+            <main className="flex flex-1 w-full items-start justify-center bg-muted/20 p-4 md:p-8">
+                <Card className="w-full max-w-3xl shadow-lg rounded-xl mt-0">
+                    <CardHeader>
+                        <Skeleton className="h-8 w-64 mb-2" />
+                        <Skeleton className="h-4 w-full" />
+                    </CardHeader>
+                    <CardContent className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                        </div>
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                         <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                </Card>
+            </main>
+        </div>
+    );
   }
 
   if (!student) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Siswa tidak ditemukan. Harap kembali ke dasbor dan coba lagi.</p>
+        <p>Siswa tidak ditemukan atau Anda tidak memiliki akses.</p>
+        <Link href="/dashboard" className="ml-2 underline">Kembali</Link>
       </div>
     );
   }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -410,5 +508,3 @@ export default function PermissionFormPage() {
     </div>
   );
 }
-
-    
