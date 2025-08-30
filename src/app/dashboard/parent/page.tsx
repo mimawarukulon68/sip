@@ -299,8 +299,12 @@ export default function ParentDashboardPage() {
                     <span>Filter Periode Akademik</span>
                 </CardTitle>
                 <CardDescription>
-                    Pilih tahun ajaran dan periode untuk melihat ringkasan perizinan yang sesuai. 
-                    {currentAcademicPeriod ? ` Periode aktif saat ini adalah ${currentAcademicPeriod.period_name} - T.A. ${currentAcademicPeriod.academic_year}.` : ' Saat ini tidak ada periode akademik yang aktif.'}
+                    Pilih tahun ajaran dan periode untuk melihat ringkasan perizinan yang sesuai.
+                    {currentAcademicPeriod ? (
+                        <span> Periode aktif saat ini adalah <strong>{currentAcademicPeriod.period_name}</strong> TA <strong>{currentAcademicPeriod.academic_year}</strong>.</span>
+                    ) : (
+                        ' Saat ini tidak ada periode akademik yang aktif.'
+                    )}
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -454,5 +458,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
