@@ -318,7 +318,7 @@ export default function ParentDashboardPage() {
                     <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
                         <SelectTrigger id="academic-period">
                             <SelectValue placeholder="Pilih Periode" />
-                        </Trigger>
+                        </SelectTrigger>
                         <SelectContent>
                             {periodsForSelectedYear.map(period => (
                                 <SelectItem key={period.id} value={period.id}>{period.period_name}</SelectItem>
@@ -328,8 +328,6 @@ export default function ParentDashboardPage() {
                 </div>
             </CardContent>
         </Card>
-
-
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
               const activeLeave = student.leave_requests.find(lr => lr.status === 'AKTIF');
@@ -450,3 +448,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
