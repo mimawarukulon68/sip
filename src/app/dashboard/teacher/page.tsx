@@ -42,6 +42,7 @@ export default function TeacherDashboardPage() {
 
     React.useEffect(() => {
         async function fetchProfileAndData() {
+            setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 router.replace("/");
@@ -71,24 +72,35 @@ export default function TeacherDashboardPage() {
             
             if (hrClass) {
                 setHomeroomClass(hrClass);
-                // Fetch leave requests for students in this class
-                const { data: requests, error: requestsError } = await supabase
-                    .from('leave_requests')
-                    .select(`
-                        id,
-                        start_date,
-                        end_date,
-                        leave_type,
-                        status,
-                        students (
-                            full_name
-                        )
-                    `)
-                    .in('student_id', (await supabase.from('students').select('id').eq('class_id', hrClass.id)).data?.map(s => s.id) || [])
-                    .order('start_date', { ascending: false });
 
-                if (requests) {
-                    setLeaveRequests(requests as LeaveRequest[]);
+                // Fetch students in this class
+                const { data: students, error: studentsError } = await supabase
+                    .from('students')
+                    .select('id')
+                    .eq('class_id', hrClass.id);
+
+                if (students && students.length > 0) {
+                    const studentIds = students.map(s => s.id);
+                    
+                    // Fetch leave requests for students in this class
+                    const { data: requests, error: requestsError } = await supabase
+                        .from('leave_requests')
+                        .select(`
+                            id,
+                            start_date,
+                            end_date,
+                            leave_type,
+                            status,
+                            students (
+                                full_name
+                            )
+                        `)
+                        .in('student_id', studentIds)
+                        .order('start_date', { ascending: false });
+
+                    if (requests) {
+                        setLeaveRequests(requests as LeaveRequest[]);
+                    }
                 }
             }
             
@@ -192,4 +204,3 @@ export default function TeacherDashboardPage() {
         </div>
     );
 }
-
