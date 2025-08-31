@@ -161,16 +161,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
              </div>
           </header>
           <main className="container mx-auto p-4 md:p-8 space-y-8">
-            <div className="flex items-center space-x-4">
-                <Skeleton className="w-16 h-16 rounded-full" />
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-5 w-32" />
-                </div>
-            </div>
-             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
-            </div>
+             <Skeleton className="h-24 w-full" />
              <Skeleton className="h-40 w-full" />
              <Skeleton className="h-64 w-full" />
           </main>
@@ -214,18 +205,20 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       <header className="bg-white shadow-sm border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-14 sm:h-16">
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon">
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="sr-only">Kembali</span>
-                    </Button>
-                     <div>
+                <div className="flex items-center gap-2">
+                    <Link href="/dashboard" className="mr-2">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft className="w-5 h-5" />
+                            <span className="sr-only">Kembali</span>
+                        </Button>
+                    </Link>
+                     <div className="text-left">
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
                         <p className="text-xs sm:text-sm text-gray-600">
                           {student.full_name} - Kelas {student.classes?.class_name || 'N/A'}
                         </p>
                     </div>
-                </Link>
+                </div>
                 <Avatar className="w-9 h-9">
                     <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.full_name} />
                     <AvatarFallback className="bg-primary/10 text-primary">
@@ -237,14 +230,39 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard icon={BookUser} title="Total Izin" value={stats.total} color="text-blue-600" />
-            <StatCard icon={Clock} title="Aktif" value={stats.active} color="text-yellow-600" />
-            <StatCard icon={CheckCircle} title="Selesai" value={stats.completed} color="text-green-600" />
-            <StatCard icon={XCircle} title="Dibatalkan" value={stats.cancelled} color="text-red-600" />
-            <StatCard icon={Thermometer} title="Sakit" value={stats.sick} color="text-red-600" />
-            <StatCard icon={ClipboardList} title="Izin" value={stats.permit} color="text-blue-600" />
-        </div>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <BookUser className="w-5 h-5 mr-2" />
+                  Ringkasan Perizinan
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-3 bg-red-50 rounded-lg">
+                        <Thermometer className="w-5 h-5 mx-auto text-red-600" />
+                        <p className="text-xl font-bold mt-1 text-red-700">{stats.sick}</p>
+                        <p className="text-xs text-red-600">Sakit</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                        <ClipboardList className="w-5 h-5 mx-auto text-blue-600" />
+                        <p className="text-xl font-bold mt-1 text-blue-700">{stats.permit}</p>
+                        <p className="text-xs text-blue-600">Izin</p>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg">
+                        <CheckCircle className="w-5 h-5 mx-auto text-green-600" />
+                        <p className="text-xl font-bold mt-1 text-green-700">{stats.completed}</p>
+                        <p className="text-xs text-green-600">Selesai</p>
+                    </div>
+                    <div className="p-3 bg-gray-100 rounded-lg">
+                        <XCircle className="w-5 h-5 mx-auto text-gray-600" />
+                        <p className="text-xl font-bold mt-1 text-gray-700">{stats.cancelled}</p>
+                        <p className="text-xs text-gray-600">Dibatalkan</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -366,17 +384,4 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   );
 }
 
-
-function StatCard({ icon: Icon, title, value, color }: { icon: React.ElementType, title: string, value: number, color: string }) {
-    return (
-        <Card>
-            <CardContent className="p-4 text-center">
-              <Icon className={`w-6 h-6 mx-auto mb-2 ${color}`} />
-              <p className="text-sm text-muted-foreground">{title}</p>
-              <p className={`text-xl font-bold ${color}`}>{value}</p>
-            </CardContent>
-        </Card>
-    )
-}
-
-    
+  
