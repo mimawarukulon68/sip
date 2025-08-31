@@ -50,7 +50,7 @@ type Student = {
 };
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = params;
+  const studentId = params.studentId;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,4 +390,3 @@ function StatCard({ icon: Icon, title, value, color }: { icon: React.ElementType
     )
 }
 
-    
