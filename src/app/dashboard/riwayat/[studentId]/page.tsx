@@ -22,7 +22,9 @@ import {
   ClipboardList,
   ArrowLeft,
   Loader2,
-  BookUser
+  BookUser,
+  Archive,
+  ArchiveX
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -210,21 +212,22 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       <header className="bg-white shadow-sm border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-14 sm:h-16">
-                 <div className="flex items-center">
-                    <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center mr-3">
-                        <History className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                    <div>
-                        <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
-                        <p className="text-xs sm:text-sm text-gray-600">Detail riwayat untuk {student.full_name}</p>
-                    </div>
-                </div>
-                 <Link href="/dashboard">
-                    <Button variant="outline" size="sm">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Kembali
+                <Link href="/dashboard">
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft className="w-5 h-5" />
+                        <span className="sr-only">Kembali</span>
                     </Button>
                 </Link>
+                <div className="text-center">
+                    <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
+                    <p className="text-xs sm:text-sm text-gray-600">{student.full_name}</p>
+                </div>
+                <Avatar className="w-9 h-9">
+                    <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.full_name} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                        {student.full_name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                </Avatar>
             </div>
         </div>
       </header>
