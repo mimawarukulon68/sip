@@ -209,7 +209,7 @@ export default function ParentDashboardPage() {
         if (leaveToCancel.document_url) {
             const path = new URL(leaveToCancel.document_url).pathname.split('/dokumen_izin/')[1];
             if (path) {
-                const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
+                const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([decodeURIComponent(path)]);
                 if (storageError) {
                     // Log the error but don't block the process, as the user's main goal is to cancel the request.
                     console.error("Failed to delete document, but continuing with cancellation:", storageError);
@@ -526,7 +526,7 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Izin akan tercatat sebagai "Dibatalkan" di riwayat. Dokumen pendukung yang terunggah (jika ada) akan dihapus permanen.
+                        Izin akan tercatat sebagai "Dibatalkan" di Riwayat. Dokumen Pendukung <em>izin ini</em> yang terunggah (jika ada) akan dihapus dari sistem.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
@@ -544,3 +544,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
