@@ -28,12 +28,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 
 type ParentProfile = {
@@ -49,20 +60,24 @@ type AcademicPeriod = {
     end_date: string;
 }
 
+type LeaveRequest = {
+    id: string;
+    leave_type: 'Sakit' | 'Izin';
+    start_date: string;
+    end_date: string;
+    reason: string | null;
+    status: 'AKTIF' | 'SELESAI' | 'DIBATALKAN';
+    document_url: string | null;
+};
+
+
 type StudentData = {
     id: string;
     full_name: string;
     classes: {
         class_name: string;
     } | null;
-    leave_requests: {
-        id: string;
-        leave_type: 'Sakit' | 'Izin';
-        start_date: string;
-        end_date: string;
-        reason: string | null;
-        status: 'AKTIF' | 'SELESAI' | 'DIBATALKAN';
-    }[];
+    leave_requests: LeaveRequest[];
 };
 
 const getBadgeInfo = (activeLeave: StudentData['leave_requests'][0] | undefined) => {
@@ -75,6 +90,7 @@ const getBadgeInfo = (activeLeave: StudentData['leave_requests'][0] | undefined)
 
 export default function ParentDashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [profile, setProfile] = React.useState<ParentProfile | null>(null);
   const [students, setStudents] = React.useState<StudentData[]>([]);
   const [allAcademicPeriods, setAllAcademicPeriods] = React.useState<AcademicPeriod[]>([]);
@@ -82,6 +98,9 @@ export default function ParentDashboardPage() {
   const [selectedAcademicYear, setSelectedAcademicYear] = React.useState<string | null>(null);
   const [selectedPeriodId, setSelectedPeriodId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [isCancelling, setIsCancelling] = React.useState(false);
+  const [leaveToCancel, setLeaveToCancel] = React.useState<LeaveRequest | null>(null);
+  
   
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
@@ -95,87 +114,142 @@ export default function ParentDashboardPage() {
   }, [allAcademicPeriods, selectedAcademicYear]);
 
 
-  React.useEffect(() => {
-    async function fetchProfileAndData() {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            router.replace("/");
-            return;
-        }
-
-        const { data: parentProfile, error: profileError } = await supabase
-            .from('parent_profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-        
-        if (profileError || !parentProfile) {
-            console.error("Not a parent or error fetching profile, redirecting...");
-            await supabase.auth.signOut();
-            router.replace("/?error=no_parent_profile");
-            return;
-        }
-        setProfile({ ...parentProfile, email: user.email });
-
-        const studentRelationsPromise = supabase
-            .from('student_parents')
-            .select('student_id')
-            .eq('parent_profile_id', parentProfile.id);
-
-        const academicPeriodsPromise = supabase
-            .from('academic_periods')
-            .select('*')
-            .order('start_date', { ascending: false });
-
-        const [{ data: studentRelations, error: relationsError }, { data: periodsData, error: periodsError }] = await Promise.all([
-            studentRelationsPromise, 
-            academicPeriodsPromise
-        ]);
-
-        if (relationsError) console.error("Error fetching student relations:", relationsError);
-        if (periodsError) console.error("Error fetching academic periods:", periodsError);
-
-        if (periodsData) {
-            setAllAcademicPeriods(periodsData);
-            const today = new Date();
-            const activePeriod = periodsData.find(p => isWithinInterval(today, { start: parseISO(p.start_date), end: parseISO(p.end_date) })) || null;
-            setCurrentAcademicPeriod(activePeriod);
-            if (activePeriod) {
-                setSelectedAcademicYear(activePeriod.academic_year);
-                setSelectedPeriodId(activePeriod.id);
-            } else if (periodsData.length > 0) {
-                 const latestPeriod = periodsData[0];
-                 setSelectedAcademicYear(latestPeriod.academic_year);
-                 setSelectedPeriodId(latestPeriod.id);
-            }
-        }
-
-        if (studentRelations && studentRelations.length > 0) {
-            const studentIds = studentRelations.map(r => r.student_id);
-            const { data: studentData, error: studentsError } = await supabase
-                .from('students')
-                .select(`
-                    id,
-                    full_name,
-                    classes ( class_name ),
-                    leave_requests ( id, leave_type, start_date, end_date, reason, status )
-                `)
-                .in('id', studentIds);
-            
-            if (studentData) setStudents(studentData as StudentData[]);
-            if (studentsError) console.error("Error fetching student data:", studentsError);
-        }
-        
-        setLoading(false);
+  const fetchProfileAndData = React.useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        router.replace("/");
+        return;
     }
 
-    fetchProfileAndData();
+    const { data: parentProfile, error: profileError } = await supabase
+        .from('parent_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (profileError || !parentProfile) {
+        console.error("Not a parent or error fetching profile, redirecting...");
+        await supabase.auth.signOut();
+        router.replace("/?error=no_parent_profile");
+        return;
+    }
+    setProfile({ ...parentProfile, email: user.email });
+
+    const studentRelationsPromise = supabase
+        .from('student_parents')
+        .select('student_id')
+        .eq('parent_profile_id', parentProfile.id);
+
+    const academicPeriodsPromise = supabase
+        .from('academic_periods')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+    const [{ data: studentRelations, error: relationsError }, { data: periodsData, error: periodsError }] = await Promise.all([
+        studentRelationsPromise, 
+        academicPeriodsPromise
+    ]);
+
+    if (relationsError) console.error("Error fetching student relations:", relationsError);
+    if (periodsError) console.error("Error fetching academic periods:", periodsError);
+
+    if (periodsData) {
+        setAllAcademicPeriods(periodsData);
+        const today = new Date();
+        const activePeriod = periodsData.find(p => isWithinInterval(today, { start: parseISO(p.start_date), end: parseISO(p.end_date) })) || null;
+        setCurrentAcademicPeriod(activePeriod);
+        if (activePeriod) {
+            setSelectedAcademicYear(activePeriod.academic_year);
+            setSelectedPeriodId(activePeriod.id);
+        } else if (periodsData.length > 0) {
+             const latestPeriod = periodsData[0];
+             setSelectedAcademicYear(latestPeriod.academic_year);
+             setSelectedPeriodId(latestPeriod.id);
+        }
+    }
+
+    if (studentRelations && studentRelations.length > 0) {
+        const studentIds = studentRelations.map(r => r.student_id);
+        const { data: studentData, error: studentsError } = await supabase
+            .from('students')
+            .select(`
+                id,
+                full_name,
+                classes ( class_name ),
+                leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url )
+            `)
+            .in('id', studentIds);
+        
+        if (studentData) setStudents(studentData as StudentData[]);
+        if (studentsError) console.error("Error fetching student data:", studentsError);
+    }
+    
+    setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+
+  React.useEffect(() => {
+    fetchProfileAndData();
+  }, [fetchProfileAndData]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!leaveToCancel) return;
+    
+    setIsCancelling(true);
+
+    try {
+        // Step 1: Delete document from Storage if it exists
+        if (leaveToCancel.document_url) {
+            const path = new URL(leaveToCancel.document_url).pathname.split('/dokumen_izin/')[1];
+            const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
+            if (storageError) {
+                console.error("Failed to delete document:", storageError);
+                toast({
+                    variant: "destructive",
+                    title: "Gagal Menghapus Dokumen",
+                    description: "Tidak dapat menghapus dokumen pendukung. Silakan coba lagi."
+                });
+                setIsCancelling(false);
+                setLeaveToCancel(null);
+                return;
+            }
+        }
+
+        // Step 2: Update the leave request status in the database
+        const { error: dbError } = await supabase
+            .from('leave_requests')
+            .update({ status: 'DIBATALKAN' })
+            .eq('id', leaveToCancel.id);
+
+        if (dbError) {
+            throw dbError;
+        }
+
+        toast({
+            title: "Izin Dibatalkan",
+            description: "Pemberitahuan izin telah berhasil dibatalkan."
+        });
+
+        // Step 3: Refresh data
+        await fetchProfileAndData();
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Gagal Membatalkan Izin",
+            description: error.message || "Terjadi kesalahan pada server."
+        });
+    } finally {
+        setIsCancelling(false);
+        setLeaveToCancel(null);
+    }
   };
   
   const handleYearChange = (year: string) => {
@@ -416,9 +490,9 @@ export default function ParentDashboardPage() {
                         <Check className="mr-2 h-4 w-4" />
                         Sudah Masuk
                         </Button>
-                        <Button variant="destructive" size="sm" className="flex-1">
-                        <X className="mr-2 h-4 w-4" />
-                        Batalkan
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToCancel(activeLeave)}>
+                            <X className="mr-2 h-4 w-4" />
+                            Batalkan
                         </Button>
                     </>
                     ) : (
@@ -444,6 +518,26 @@ export default function ParentDashboardPage() {
             </Card>
           )})}
         </div>
+         <AlertDialog open={!!leaveToCancel} onOpenChange={(open) => !open && setLeaveToCancel(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Anda yakin ingin membatalkan izin ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tindakan ini tidak dapat diurungkan. Status izin akan diubah menjadi 'Dibatalkan' 
+                        dan dokumen pendukung yang terunggah (jika ada) akan dihapus secara permanen.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setLeaveToCancel(null)} disabled={isCancelling}>
+                        Jangan Batalkan
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmCancel} disabled={isCancelling} className="bg-destructive hover:bg-destructive/90">
+                         {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Konfirmasi Pembatalan
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
