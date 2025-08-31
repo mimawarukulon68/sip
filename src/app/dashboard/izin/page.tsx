@@ -10,6 +10,7 @@ import * as z from "zod";
 import { addDays, format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Calendar as CalendarIcon, Upload, ArrowLeft } from "lucide-react";
+import { format as formatDate } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +58,7 @@ const formSchema = z.object({
   }),
   endDate: z.date().optional(),
   reasonText: z.string().optional(),
-  document: z.any().optional(),
+  document: z.instanceof(FileList).optional(),
 });
 
 type StudentData = {
@@ -76,6 +77,7 @@ export default function PermissionFormPage() {
   const { toast } = useToast();
   const [student, setStudent] = React.useState<StudentData>(null);
   const [loading, setLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -192,30 +194,63 @@ export default function PermissionFormPage() {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         toast({ variant: "destructive", title: "Error", description: "Anda harus login untuk mengajukan izin." });
+        setIsSubmitting(false);
         return;
     }
 
-    const { error } = await supabase.from('leave_requests').insert({
+    let documentUrl: string | null = null;
+    const file = values.document?.[0];
+
+    if (file) {
+        if (!student?.classes?.class_name) {
+             toast({ variant: "destructive", title: "Gagal Mengunggah", description: "Nama kelas siswa tidak ditemukan. Tidak dapat mengunggah dokumen." });
+             setIsSubmitting(false);
+             return;
+        }
+
+        const now = new Date();
+        const dateStr = formatDate(now, "ddMMyy", { timeZone: "Asia/Jakarta" });
+        const timeStr = formatDate(now, "HHmmss", { timeZone: "Asia/Jakarta" });
+        const studentNameSanitized = values.studentName.replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `${dateStr}-${timeStr}-${studentNameSanitized}.${file.name.split('.').pop()}`;
+        const filePath = `${student.classes.class_name}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('dokumen_izin')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            toast({ variant: "destructive", title: "Gagal Mengunggah", description: `Gagal mengunggah dokumen: ${uploadError.message}` });
+            setIsSubmitting(false);
+            return;
+        }
+        
+        const { data: publicUrlData } = supabase.storage.from('dokumen_izin').getPublicUrl(filePath);
+        documentUrl = publicUrlData.publicUrl;
+    }
+
+
+    const { data: leaveRequestData, error } = await supabase.from('leave_requests').insert({
         created_by_user_id: user.id,
         student_id: values.studentId,
         leave_type: values.reasonType,
         reason: values.reasonText,
         start_date: format(values.startDate, "yyyy-MM-dd"),
         end_date: format(values.endDate || values.startDate, "yyyy-MM-dd"),
-        status: 'AKTIF'
-    });
+        status: 'AKTIF',
+        document_url: documentUrl
+    }).select().single();
+
+    setIsSubmitting(false);
 
     if (error) {
         toast({ variant: "destructive", title: "Gagal Mengirim", description: error.message });
-    } else {
-        toast({
-            title: "Pemberitahuan Terkirim",
-            description: "Formulir izin Anda telah berhasil dikirimkan."
-        });
-        router.push("/dashboard");
+    } else if (leaveRequestData) {
+        router.push(`/dashboard/izin/sukses?id=${leaveRequestData.id}`);
     }
   }
 
@@ -260,6 +295,7 @@ export default function PermissionFormPage() {
     );
   }
 
+  const documentRef = form.register("document");
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -480,7 +516,7 @@ export default function PermissionFormPage() {
                       <FormControl>
                           <div className="relative">
                             <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input type="file" {...form.register("document")} className="pl-10"/>
+                            <Input type="file" {...documentRef} className="pl-10"/>
                           </div>
                       </FormControl>
                       <FormMessage />
@@ -488,8 +524,8 @@ export default function PermissionFormPage() {
                   )}
                 />
 
-                <Button type="submit" className="w-full text-base font-semibold py-6">
-                  Kirim Pemberitahuan
+                <Button type="submit" className="w-full text-base font-semibold py-6" disabled={isSubmitting}>
+                   {isSubmitting ? 'Mengirim...' : 'Kirim Pemberitahuan'}
                 </Button>
               </form>
             </Form>
