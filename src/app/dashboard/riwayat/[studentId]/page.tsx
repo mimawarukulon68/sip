@@ -158,7 +158,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
              </div>
           </header>
           <main className="container mx-auto p-4 md:p-8 space-y-8">
-             <Skeleton className="h-24 w-full" />
+             <Skeleton className="h-40 w-full" />
              <Skeleton className="h-40 w-full" />
              <Skeleton className="h-64 w-full" />
           </main>
@@ -412,5 +412,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
-    
