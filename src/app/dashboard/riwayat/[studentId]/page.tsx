@@ -17,12 +17,10 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  XCircle,
   Thermometer,
   ClipboardList,
   ArrowLeft,
   BookUser,
-  Ban,
   Archive,
   ArchiveX
 } from "lucide-react";
@@ -131,7 +129,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       case 'DIBATALKAN':
         return (
           <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">
-            <XCircle className="w-3 h-3 mr-1" />
+            <ArchiveX className="w-3 h-3 mr-1" />
             DIBATALKAN
           </Badge>
         );
@@ -240,16 +238,16 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <div className="flex items-center text-red-800 text-sm gap-2">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center text-red-800 text-sm gap-2">
                             <Thermometer className="w-4 h-4" />
                             <span className="font-medium">Sakit</span>
                         </div>
                         <p className="text-xl font-bold text-red-900 mt-1">{sickRequests.length} kali</p>
                         <p className="text-xs text-red-700">{totalSickDays} hari</p>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center text-blue-800 text-sm gap-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center text-blue-800 text-sm gap-2">
                             <ClipboardList className="w-4 h-4" />
                             <span className="font-medium">Izin</span>
                         </div>
@@ -414,3 +412,5 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
+
+    
