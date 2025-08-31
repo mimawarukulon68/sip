@@ -1,6 +1,6 @@
 
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,7 @@ type Student = {
 };
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = params;
+  const { studentId } = use(params);
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,5 +390,3 @@ function StatCard({ icon: Icon, title, value, color }: { icon: React.ElementType
         </Card>
     )
 }
-
-    
