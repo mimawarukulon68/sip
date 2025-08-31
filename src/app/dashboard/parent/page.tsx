@@ -526,7 +526,7 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Tindakan ini tidak dapat diurungkan. Dokumen pendukung akan dihapus permanen.
+                        Izin akan tercatat sebagai "Dibatalkan" di riwayat. Dokumen pendukung yang terunggah (jika ada) akan dihapus permanen.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
