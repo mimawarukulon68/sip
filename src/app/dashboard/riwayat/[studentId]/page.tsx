@@ -22,7 +22,9 @@ import {
   ClipboardList,
   ArrowLeft,
   BookUser,
-  Ban
+  Ban,
+  Archive,
+  ArchiveX
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -258,7 +260,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                 
                 <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
                     <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
-                        <BookUser className="w-4 h-4" />
+                        <Archive className="w-4 h-4" />
                         <span className="font-medium">Total Perizinan Siswa</span>
                     </div>
                      <p className="text-xl font-bold text-slate-900 mt-1">{validRequests.length} kali ({totalValidDays} hari)</p>
@@ -283,7 +285,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                     </div>
                      <div>
                         <div className="flex items-center justify-center gap-2 text-gray-600">
-                             <XCircle className="w-4 h-4" />
+                             <ArchiveX className="w-4 h-4" />
                              <span className="font-semibold">Dibatalkan</span>
                         </div>
                         <p className="font-bold text-base mt-1">{cancelledRequests}</p>
