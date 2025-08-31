@@ -239,47 +239,59 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div className="p-3 bg-red-50 rounded-lg flex items-center gap-3">
-                        <Thermometer className="w-6 h-6 text-red-600 flex-shrink-0" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                           <Thermometer className="w-5 h-5 text-red-600" />
+                        </div>
                         <div>
-                            <p className="text-xl font-bold text-red-700">{stats.sick}</p>
-                            <p className="text-xs text-red-600">Sakit</p>
+                            <p className="font-semibold text-gray-700">{stats.sick}</p>
+                            <p className="text-xs text-muted-foreground">Sakit</p>
                         </div>
                     </div>
-                     <div className="p-3 bg-blue-50 rounded-lg flex items-center gap-3">
-                        <ClipboardList className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                           <ClipboardList className="w-5 h-5 text-blue-600" />
+                        </div>
                         <div>
-                            <p className="text-xl font-bold text-blue-700">{stats.permit}</p>
-                            <p className="text-xs text-blue-600">Izin</p>
+                           <p className="font-semibold text-gray-700">{stats.permit}</p>
+                            <p className="text-xs text-muted-foreground">Izin</p>
                         </div>
                     </div>
-                     <div className="p-3 bg-green-50 rounded-lg flex items-center gap-3">
-                        <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                           <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
                         <div>
-                            <p className="text-xl font-bold text-green-700">{stats.completed}</p>
-                            <p className="text-xs text-green-600">Selesai</p>
+                           <p className="font-semibold text-gray-700">{stats.completed}</p>
+                            <p className="text-xs text-muted-foreground">Selesai</p>
                         </div>
                     </div>
-                     <div className="p-3 bg-gray-100 rounded-lg flex items-center gap-3">
-                        <XCircle className="w-6 h-6 text-gray-600 flex-shrink-0" />
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                           <XCircle className="w-5 h-5 text-gray-600" />
+                        </div>
                         <div>
-                           <p className="text-xl font-bold text-gray-700">{stats.cancelled}</p>
-                           <p className="text-xs text-gray-600">Dibatalkan</p>
+                           <p className="font-semibold text-gray-700">{stats.cancelled}</p>
+                           <p className="text-xs text-muted-foreground">Dibatalkan</p>
                         </div>
                     </div>
-                     <div className="p-3 bg-yellow-50 rounded-lg flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                           <Clock className="w-5 h-5 text-yellow-600" />
+                        </div>
                         <div>
-                            <p className="text-xl font-bold text-yellow-700">{stats.active}</p>
-                            <p className="text-xs text-yellow-600">Aktif</p>
+                           <p className="font-semibold text-gray-700">{stats.active}</p>
+                            <p className="text-xs text-muted-foreground">Aktif</p>
                         </div>
                     </div>
-                    <div className="p-3 bg-indigo-50 rounded-lg flex items-center gap-3">
-                        <Archive className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                           <Archive className="w-5 h-5 text-indigo-600" />
+                        </div>
                         <div>
-                            <p className="text-xl font-bold text-indigo-700">{stats.total}</p>
-                            <p className="text-xs text-indigo-600">Total</p>
+                           <p className="font-semibold text-gray-700">{stats.total}</p>
+                            <p className="text-xs text-muted-foreground">Total</p>
                         </div>
                     </div>
                 </div>
@@ -405,3 +417,5 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
+
+    
