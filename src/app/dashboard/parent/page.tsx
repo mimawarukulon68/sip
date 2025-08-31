@@ -567,27 +567,27 @@ export default function ParentDashboardPage() {
                       <FileSignature className="h-4 w-4 text-gray-600"/>
                       Ringkasan Perizinan Siswa
                     </h4>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-3">
-                            <div className="bg-red-50 rounded-lg p-3">
-                                <div className="text-xs text-red-600">Sakit</div>
-                                <div className="text-sm font-semibold text-red-700">{sakitAttendance.length} kali ({totalSakitDays} hari)</div>
-                            </div>
-                            <div className="bg-yellow-50 rounded-lg p-3">
-                                <div className="text-xs text-yellow-600">Izin</div>
-                                <div className="text-sm font-semibold text-yellow-700">{izinAttendance.length} kali ({totalIzinDays} hari)</div>
-                            </div>
-                        </div>
-                         <div className="flex flex-col gap-3">
-                            <div className="bg-gray-100 rounded-lg p-3">
-                                <div className="text-xs text-gray-600">Izin Dibatalkan</div>
-                                <div className="text-sm font-semibold text-gray-700">{canceledRequests.length} kali</div>
+                    <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-3">
+                                <div className="bg-red-50 rounded-lg p-3">
+                                    <div className="text-xs text-red-600">Sakit</div>
+                                    <div className="text-sm font-semibold text-red-700">{sakitAttendance.length} kali ({totalSakitDays} hari)</div>
+                                </div>
+                                <div className="bg-yellow-50 rounded-lg p-3">
+                                    <div className="text-xs text-yellow-600">Izin</div>
+                                    <div className="text-sm font-semibold text-yellow-700">{izinAttendance.length} kali ({totalIzinDays} hari)</div>
+                                </div>
                             </div>
                             <div className="bg-slate-200 rounded-lg p-3 flex flex-col justify-center items-center text-center">
                                 <div className="text-xs text-slate-600">Total Izin</div>
                                 <div className="text-lg font-bold text-slate-900">{validRequests.length} kali</div>
                                 <div className="text-sm text-slate-800">({totalValidDays} hari)</div>
                             </div>
+                        </div>
+                        <div className="bg-gray-100 rounded-lg p-3">
+                            <div className="text-xs text-gray-600">Izin Dibatalkan</div>
+                            <div className="text-sm font-semibold text-gray-700">{canceledRequests.length} kali</div>
                         </div>
                     </div>
                 </div>
@@ -773,3 +773,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
