@@ -51,7 +51,7 @@ type Student = {
 };
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const studentId = params.studentId;
+  const { studentId } = params;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
