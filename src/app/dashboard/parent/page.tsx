@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Ban } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Ban, Thermometer, FileText, Archive } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays } from "date-fns";
 import { id } from "date-fns/locale";
@@ -571,23 +571,35 @@ export default function ParentDashboardPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col gap-3">
                                 <div className="bg-red-50 rounded-lg p-3">
-                                    <div className="text-xs text-red-600">Sakit</div>
-                                    <div className="text-sm font-semibold text-red-700">{sakitAttendance.length} kali ({totalSakitDays} hari)</div>
+                                    <div className="flex items-center text-xs text-red-600 gap-2">
+                                        <Thermometer className="h-4 w-4" />
+                                        <span>Sakit</span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-red-700 mt-1">{sakitAttendance.length} kali ({totalSakitDays} hari)</div>
                                 </div>
                                 <div className="bg-yellow-50 rounded-lg p-3">
-                                    <div className="text-xs text-yellow-600">Izin</div>
-                                    <div className="text-sm font-semibold text-yellow-700">{izinAttendance.length} kali ({totalIzinDays} hari)</div>
+                                    <div className="flex items-center text-xs text-yellow-600 gap-2">
+                                        <FileText className="h-4 w-4" />
+                                        <span>Izin</span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-yellow-700 mt-1">{izinAttendance.length} kali ({totalIzinDays} hari)</div>
                                 </div>
                             </div>
                             <div className="bg-slate-200 rounded-lg p-3 flex flex-col justify-center items-center text-center">
-                                <div className="text-xs text-slate-600">Total Izin</div>
-                                <div className="text-lg font-bold text-slate-900">{validRequests.length} kali</div>
+                                <div className="flex items-center text-xs text-slate-600 gap-2">
+                                    <Archive className="h-4 w-4" />
+                                    <span>Total Izin</span>
+                                </div>
+                                <div className="text-lg font-bold text-slate-900 mt-1">{validRequests.length} kali</div>
                                 <div className="text-sm text-slate-800">({totalValidDays} hari)</div>
                             </div>
                         </div>
                         <div className="bg-gray-100 rounded-lg p-3">
-                            <div className="text-xs text-gray-600">Izin Dibatalkan</div>
-                            <div className="text-sm font-semibold text-gray-700">{canceledRequests.length} kali</div>
+                            <div className="flex items-center text-xs text-gray-600 gap-2">
+                                <Ban className="h-4 w-4" />
+                                <span>Izin Dibatalkan</span>
+                            </div>
+                            <div className="text-sm font-semibold text-gray-700 mt-1">{canceledRequests.length} kali</div>
                         </div>
                     </div>
                 </div>
