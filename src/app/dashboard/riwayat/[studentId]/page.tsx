@@ -4,11 +4,19 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction
+} from "@/components/ui/alert-dialog";
 import { 
   History, 
   Search, 
@@ -22,7 +30,8 @@ import {
   ArrowLeft,
   BookUser,
   Archive,
-  ArchiveX
+  ArchiveX,
+  Info
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -57,6 +66,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   
   useEffect(() => {
     async function fetchData() {
@@ -137,12 +147,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const getTypeIcon = (type: string) => {
-    return type === 'Sakit' ? 
-      <Thermometer className="w-4 h-4 text-red-500" /> : 
-      <ClipboardList className="w-4 h-4 text-blue-500" />;
-  };
   
   const calculateDuration = (startDate: string, endDate: string) => {
     const diffDays = differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
@@ -213,7 +217,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                      <div className="text-left">
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
                         <p className="text-xs sm:text-sm text-gray-600">
-                          {student.full_name} - {student.classes?.class_name || 'N/A'}
+                          {student.full_name} - {student.classes?.class_name}
                         </p>
                     </div>
                 </div>
@@ -230,66 +234,66 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
         <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <BookUser className="w-5 h-5 mr-2" />
-                  Ringkasan Perizinan
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center text-red-800 text-sm gap-2">
-                            <Thermometer className="w-4 h-4" />
-                            <span className="font-medium">Sakit</span>
-                        </div>
-                        <p className="text-xl font-bold text-red-900 mt-1">{sickRequests.length} kali</p>
-                        <p className="text-xs text-red-700">{totalSickDays} hari</p>
-                    </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center text-blue-800 text-sm gap-2">
-                            <ClipboardList className="w-4 h-4" />
-                            <span className="font-medium">Izin</span>
-                        </div>
-                        <p className="text-xl font-bold text-blue-900 mt-1">{permitRequests.length} kali</p>
-                        <p className="text-xs text-blue-700">{totalPermitDays} hari</p>
-                    </div>
-                </div>
-                
-                <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
-                    <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
-                        <Archive className="w-4 h-4" />
-                        <span className="font-medium">Total Perizinan Siswa</span>
-                    </div>
-                     <p className="text-xl font-bold text-slate-900 mt-1">{validRequests.length} kali ({totalValidDays} hari)</p>
-                </div>
-                
-                <hr className="my-4"/>
+          <CardHeader>
+              <CardTitle className="flex items-center text-lg">
+                <BookUser className="w-5 h-5 mr-2" />
+                Ringkasan Perizinan
+              </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center text-red-800 text-sm gap-2">
+                          <Thermometer className="w-4 h-4" />
+                          <span className="font-medium">Sakit</span>
+                      </div>
+                      <p className="text-xl font-bold text-red-900 mt-1">{sickRequests.length} kali</p>
+                      <p className="text-xs text-red-700">{totalSickDays} hari</p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center text-blue-800 text-sm gap-2">
+                          <ClipboardList className="w-4 h-4" />
+                          <span className="font-medium">Izin</span>
+                      </div>
+                      <p className="text-xl font-bold text-blue-900 mt-1">{permitRequests.length} kali</p>
+                      <p className="text-xs text-blue-700">{totalPermitDays} hari</p>
+                  </div>
+              </div>
+              
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
+                  <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
+                      <Archive className="w-4 h-4" />
+                      <span className="font-medium">Total Perizinan Siswa</span>
+                  </div>
+                    <p className="text-xl font-bold text-slate-900 mt-1">{validRequests.length} kali ({totalValidDays} hari)</p>
+              </div>
+              
+              <hr className="my-4"/>
 
-                <div className="grid grid-cols-3 gap-2 text-center text-xs sm:text-sm">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs sm:text-sm">
+                  <div>
+                      <div className="flex items-center justify-center gap-2 text-green-700">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="font-semibold">Selesai</span>
+                      </div>
+                      <p className="font-bold text-base mt-1">{completedRequests}</p>
+                  </div>
+                  <div>
+                      <div className="flex items-center justify-center gap-2 text-yellow-700">
+                            <Clock className="w-4 h-4" />
+                            <span className="font-semibold">Aktif</span>
+                      </div>
+                      <p className="font-bold text-base mt-1">{activeRequests}</p>
+                  </div>
                     <div>
-                        <div className="flex items-center justify-center gap-2 text-green-700">
-                             <CheckCircle className="w-4 h-4" />
-                             <span className="font-semibold">Selesai</span>
-                        </div>
-                        <p className="font-bold text-base mt-1">{completedRequests}</p>
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-center gap-2 text-yellow-700">
-                             <Clock className="w-4 h-4" />
-                             <span className="font-semibold">Aktif</span>
-                        </div>
-                        <p className="font-bold text-base mt-1">{activeRequests}</p>
-                    </div>
-                     <div>
-                        <div className="flex items-center justify-center gap-2 text-gray-600">
-                             <ArchiveX className="w-4 h-4" />
-                             <span className="font-semibold">Dibatalkan</span>
-                        </div>
-                        <p className="font-bold text-base mt-1">{cancelledRequests}</p>
-                    </div>
-                </div>
-            </CardContent>
+                      <div className="flex items-center justify-center gap-2 text-gray-600">
+                            <ArchiveX className="w-4 h-4" />
+                            <span className="font-semibold">Dibatalkan</span>
+                      </div>
+                      <p className="font-bold text-base mt-1">{cancelledRequests}</p>
+                  </div>
+              </div>
+          </CardContent>
         </Card>
 
 
@@ -340,75 +344,89 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
-                Detail Riwayat
-              </span>
-              <Badge variant="outline">
-                Menampilkan {filteredRequests.length} hasil
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredRequests.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>
-                  {leaveRequests.length === 0 
-                    ? "Belum ada riwayat izin untuk siswa ini."
-                    : "Tidak ada data yang sesuai dengan filter Anda."
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Jenis Izin</TableHead>
-                      <TableHead>Tanggal Mulai</TableHead>
-                      <TableHead>Tanggal Selesai</TableHead>
-                      <TableHead>Durasi</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Alasan</TableHead>
-                      <TableHead>Dibuat Pada</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRequests.map((request) => (
-                        <TableRow key={request.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              {getTypeIcon(request.leave_type)}
-                              <span className="font-medium">{request.leave_type}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{format(parseISO(request.start_date), "d MMM yyyy", { locale: id })}</TableCell>
-                          <TableCell>{format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {calculateDuration(request.start_date, request.end_date)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(request.status)}</TableCell>
-                          <TableCell>
-                            <div className="max-w-[200px] truncate" title={request.reason || ''}>
-                              {request.reason || "-"}
-                            </div>
-                          </TableCell>
-                          <TableCell>{format(parseISO(request.created_at), "d MMM yyyy, HH:mm", { locale: id })}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center">
+              <Calendar className="w-5 h-5 mr-2" />
+              Detail Riwayat
+            </h2>
+            <Badge variant="outline">
+              Menampilkan {filteredRequests.length} hasil
+            </Badge>
+          </div>
+          {filteredRequests.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground bg-white rounded-lg border">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>
+                {leaveRequests.length === 0 
+                  ? "Belum ada riwayat izin untuk siswa ini."
+                  : "Tidak ada data yang sesuai dengan filter Anda."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredRequests.map((request) => (
+                <Card key={request.id} className="flex flex-col">
+                  <CardHeader className="flex flex-row items-start justify-between pb-3">
+                    <div>
+                      <CardTitle className="text-base font-semibold">{request.leave_type}</CardTitle>
+                      <CardDescription className="text-xs">{format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}</CardDescription>
+                    </div>
+                    {getStatusBadge(request.status)}
+                  </CardHeader>
+                  <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
+                     <p className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4"/>
+                        <span>Durasi: {calculateDuration(request.start_date, request.end_date)}</span>
+                     </p>
+                     <p className="flex items-center gap-2">
+                        <Clock className="w-4 h-4"/>
+                        <span>Dibuat: {format(parseISO(request.created_at), "d MMM yy, HH:mm", { locale: id })}</span>
+                     </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="secondary" className="w-full" onClick={() => setSelectedRequest(request)}>
+                      <Info className="w-4 h-4 mr-2" />
+                      Lihat Detail
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
+
+      {selectedRequest && (
+        <AlertDialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center">
+                 <Info className="w-5 h-5 mr-2" />
+                Detail Riwayat Izin
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Informasi lengkap mengenai pengajuan izin yang dipilih.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="text-sm space-y-2 py-4 border-y my-2">
+                <p><strong>Jenis Izin:</strong> {selectedRequest.leave_type}</p>
+                <p><strong>Tanggal Mulai:</strong> {format(parseISO(selectedRequest.start_date), "EEEE, d MMMM yyyy", { locale: id })}</p>
+                <p><strong>Tanggal Selesai:</strong> {format(parseISO(selectedRequest.end_date), "EEEE, d MMMM yyyy", { locale: id })}</p>
+                <p><strong>Durasi:</strong> {calculateDuration(selectedRequest.start_date, selectedRequest.end_date)}</p>
+                <div className="flex items-center"><strong>Status:</strong><span className="ml-2">{getStatusBadge(selectedRequest.status)}</span></div>
+                <p><strong>Alasan:</strong> {selectedRequest.reason || "-"}</p>
+                <p><strong>Dibuat Pada:</strong> {format(parseISO(selectedRequest.created_at), "EEEE, d MMMM yyyy, HH:mm", { locale: id })}</p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setSelectedRequest(null)}>Tutup</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
+    
