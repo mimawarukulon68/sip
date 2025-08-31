@@ -39,7 +39,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2 } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval } from "date-fns";
 import { id } from "date-fns/locale";
@@ -208,17 +208,17 @@ export default function ParentDashboardPage() {
         // Step 1: Delete document from Storage if it exists
         if (leaveToCancel.document_url) {
             const path = new URL(leaveToCancel.document_url).pathname.split('/dokumen_izin/')[1];
-            const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
-            if (storageError) {
-                console.error("Failed to delete document:", storageError);
-                toast({
-                    variant: "destructive",
-                    title: "Gagal Menghapus Dokumen",
-                    description: "Tidak dapat menghapus dokumen pendukung. Silakan coba lagi."
-                });
-                setIsCancelling(false);
-                setLeaveToCancel(null);
-                return;
+            if (path) {
+                const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
+                if (storageError) {
+                    // Log the error but don't block the process, as the user's main goal is to cancel the request.
+                    console.error("Failed to delete document, but continuing with cancellation:", storageError);
+                    toast({
+                        variant: "destructive",
+                        title: "Gagal Menghapus Dokumen",
+                        description: "Dokumen tidak dapat dihapus, namun izin tetap akan dibatalkan. Hubungi admin jika perlu."
+                    });
+                }
             }
         }
 
@@ -519,21 +519,23 @@ export default function ParentDashboardPage() {
           )})}
         </div>
          <AlertDialog open={!!leaveToCancel} onOpenChange={(open) => !open && setLeaveToCancel(null)}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Anda yakin ingin membatalkan izin ini?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Tindakan ini tidak dapat diurungkan. Status izin akan diubah menjadi 'Dibatalkan' 
-                        dan dokumen pendukung yang terunggah (jika ada) akan dihapus secara permanen.
+            <AlertDialogContent className="max-w-sm rounded-2xl">
+                <AlertDialogHeader className="text-center items-center space-y-0">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
+                    <AlertDialogDescription className="pt-2">
+                        Tindakan ini tidak dapat diurungkan. Dokumen pendukung akan dihapus permanen.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
                     <AlertDialogCancel onClick={() => setLeaveToCancel(null)} disabled={isCancelling}>
                         Jangan Batalkan
                     </AlertDialogCancel>
                     <AlertDialogAction onClick={handleConfirmCancel} disabled={isCancelling} className="bg-destructive hover:bg-destructive/90">
                          {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Konfirmasi Pembatalan
+                        Ya, Batalkan Izin
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -542,5 +544,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
