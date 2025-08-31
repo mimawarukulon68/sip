@@ -239,26 +239,48 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div className="p-3 bg-red-50 rounded-lg">
-                        <Thermometer className="w-5 h-5 mx-auto text-red-600" />
-                        <p className="text-xl font-bold mt-1 text-red-700">{stats.sick}</p>
-                        <p className="text-xs text-red-600">Sakit</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="p-3 bg-red-50 rounded-lg flex items-center gap-3">
+                        <Thermometer className="w-6 h-6 text-red-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-xl font-bold text-red-700">{stats.sick}</p>
+                            <p className="text-xs text-red-600">Sakit</p>
+                        </div>
                     </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                        <ClipboardList className="w-5 h-5 mx-auto text-blue-600" />
-                        <p className="text-xl font-bold mt-1 text-blue-700">{stats.permit}</p>
-                        <p className="text-xs text-blue-600">Izin</p>
+                     <div className="p-3 bg-blue-50 rounded-lg flex items-center gap-3">
+                        <ClipboardList className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-xl font-bold text-blue-700">{stats.permit}</p>
+                            <p className="text-xs text-blue-600">Izin</p>
+                        </div>
                     </div>
-                    <div className="p-3 bg-green-50 rounded-lg">
-                        <CheckCircle className="w-5 h-5 mx-auto text-green-600" />
-                        <p className="text-xl font-bold mt-1 text-green-700">{stats.completed}</p>
-                        <p className="text-xs text-green-600">Selesai</p>
+                     <div className="p-3 bg-green-50 rounded-lg flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-xl font-bold text-green-700">{stats.completed}</p>
+                            <p className="text-xs text-green-600">Selesai</p>
+                        </div>
                     </div>
-                    <div className="p-3 bg-gray-100 rounded-lg">
-                        <XCircle className="w-5 h-5 mx-auto text-gray-600" />
-                        <p className="text-xl font-bold mt-1 text-gray-700">{stats.cancelled}</p>
-                        <p className="text-xs text-gray-600">Dibatalkan</p>
+                     <div className="p-3 bg-gray-100 rounded-lg flex items-center gap-3">
+                        <XCircle className="w-6 h-6 text-gray-600 flex-shrink-0" />
+                        <div>
+                           <p className="text-xl font-bold text-gray-700">{stats.cancelled}</p>
+                           <p className="text-xs text-gray-600">Dibatalkan</p>
+                        </div>
+                    </div>
+                     <div className="p-3 bg-yellow-50 rounded-lg flex items-center gap-3">
+                        <Clock className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-xl font-bold text-yellow-700">{stats.active}</p>
+                            <p className="text-xs text-yellow-600">Aktif</p>
+                        </div>
+                    </div>
+                    <div className="p-3 bg-indigo-50 rounded-lg flex items-center gap-3">
+                        <Archive className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-xl font-bold text-indigo-700">{stats.total}</p>
+                            <p className="text-xs text-indigo-600">Total</p>
+                        </div>
                     </div>
                 </div>
             </CardContent>
@@ -383,5 +405,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
-  
