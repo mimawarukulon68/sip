@@ -22,9 +22,7 @@ import {
   ClipboardList,
   ArrowLeft,
   BookUser,
-  Archive,
   Ban,
-  ArchiveX,
   TrendingDown
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
@@ -216,7 +214,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                      <div className="text-left">
                         <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
                         <p className="text-xs sm:text-sm text-gray-600">
-                          {student.full_name} - Kelas {student.classes?.class_name || 'N/A'}
+                          {student.full_name} - {student.classes?.class_name || 'N/A'}
                         </p>
                     </div>
                 </div>
@@ -239,63 +237,62 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                   Ringkasan Perizinan
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
-                            <TrendingDown className="w-5 h-5 text-slate-600" />
+            <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="flex items-center text-red-800 text-sm gap-2">
+                            <Thermometer className="w-4 h-4" />
+                            <span className="font-medium">Sakit</span>
                         </div>
-                        <p className="font-semibold text-slate-800">Total Absensi</p>
+                        <p className="text-xl font-bold text-red-900 mt-1">{sickRequests.length} kali</p>
+                        <p className="text-xs text-red-700">{totalSickDays} hari</p>
                     </div>
-                    <p className="font-bold text-base text-slate-900">{validRequests.length} kali ({totalValidDays} hari)</p>
-                </div>
-
-                <hr/>
-
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-red-700">
-                            <Thermometer className="w-5 h-5" />
-                            <p>Sakit</p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center text-blue-800 text-sm gap-2">
+                            <ClipboardList className="w-4 h-4" />
+                            <span className="font-medium">Izin</span>
                         </div>
-                        <p className="font-semibold">{sickRequests.length} kali ({totalSickDays} hari)</p>
-                    </div>
-                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-blue-700">
-                           <ClipboardList className="w-5 h-5" />
-                           <p>Izin</p>
-                        </div>
-                        <p className="font-semibold">{permitRequests.length} kali ({totalPermitDays} hari)</p>
+                        <p className="text-xl font-bold text-blue-900 mt-1">{permitRequests.length} kali</p>
+                        <p className="text-xs text-blue-700">{totalPermitDays} hari</p>
                     </div>
                 </div>
                 
-                <hr />
+                <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
+                    <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
+                        <TrendingDown className="w-4 h-4" />
+                        <span className="font-medium">Total Absensi</span>
+                    </div>
+                     <p className="text-xl font-bold text-slate-900 mt-1">{validRequests.length} kali ({totalValidDays} hari)</p>
+                </div>
+                
+                <hr className="my-4"/>
 
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                           <CheckCircle className="w-5 h-5 text-green-600" />
-                           <p>Izin Selesai</p>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs sm:text-sm">
+                    <div>
+                        <div className="flex items-center justify-center gap-2 text-green-700">
+                             <CheckCircle className="w-4 h-4" />
+                             <span className="font-semibold">Selesai</span>
                         </div>
-                        <p className="font-semibold text-green-700">{completedRequests} kali</p>
+                        <p className="font-bold text-base mt-1">{completedRequests}</p>
                     </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                            <Clock className="w-5 h-5 text-yellow-600" />
-                            <p>Izin Aktif</p>
+                    <div>
+                        <div className="flex items-center justify-center gap-2 text-yellow-700">
+                             <Clock className="w-4 h-4" />
+                             <span className="font-semibold">Aktif</span>
                         </div>
-                         <p className="font-semibold text-yellow-700">{activeRequests} kali</p>
+                        <p className="font-bold text-base mt-1">{activeRequests}</p>
                     </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                            <Ban className="w-5 h-5 text-red-600" />
-                            <p>Izin Dibatalkan</p>
+                     <div>
+                        <div className="flex items-center justify-center gap-2 text-gray-600">
+                             <Ban className="w-4 h-4" />
+                             <span className="font-semibold">Dibatalkan</span>
                         </div>
-                        <p className="font-semibold text-red-700">{cancelledRequests} kali</p>
+                        <p className="font-bold text-base mt-1">{cancelledRequests}</p>
                     </div>
                 </div>
             </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader>
