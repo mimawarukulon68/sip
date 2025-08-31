@@ -24,7 +24,8 @@ import {
   Loader2,
   BookUser,
   Archive,
-  ArchiveX
+  ArchiveX,
+  Ban
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -49,7 +50,8 @@ type Student = {
     } | null;
 };
 
-export default function StudentHistoryPage({ params: { studentId } }: { params: { studentId: string } }) {
+export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
+  const studentId = params.studentId;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -388,3 +390,5 @@ function StatCard({ icon: Icon, title, value, color }: { icon: React.ElementType
         </Card>
     )
 }
+
+    
