@@ -207,7 +207,9 @@ export default function ParentDashboardPage() {
     try {
         // Step 1: Delete document from Storage if it exists
         if (leaveToCancel.document_url) {
-            const path = new URL(leaveToCancel.document_url).pathname.split('/dokumen_izin/')[1];
+            const pathSegments = leaveToCancel.document_url.split('/public/dokumen_izin/');
+            const path = pathSegments[1];
+            
             if (path) {
                 const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([decodeURIComponent(path)]);
                 if (storageError) {
@@ -526,7 +528,7 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                         <b>Izin ini</b> akan tercatat sebagai <b>&quot;Dibatalkan&quot;</b> di Riwayat. Dokumen Pendukung <b>izin ini</b> yang terunggah (jika ada) akan <b>dihapus dari sistem.</b>
+                        <b>Izin ini</b> akan tercatat sebagai <b>&quot;Dibatalkan&quot;</b> di Riwayat. Dokumen Pendukung <b>izin ini</b> yang terunggah (jika ada) akan <b>dihapus dari sistem.</b>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
