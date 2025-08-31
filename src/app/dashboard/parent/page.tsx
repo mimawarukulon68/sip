@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Ban } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays } from "date-fns";
 import { id } from "date-fns/locale";
@@ -477,7 +477,7 @@ export default function ParentDashboardPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                    <label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</label>
+                    <Label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</Label>
                     <Select onValueChange={handleYearChange} value={selectedAcademicYear || ''}>
                         <SelectTrigger id="academic-year">
                             <SelectValue placeholder="Pilih Tahun Ajaran" />
@@ -490,7 +490,7 @@ export default function ParentDashboardPage() {
                     </Select>
                 </div>
                 <div>
-                     <label htmlFor="academic-period" className="text-sm font-medium mb-2 block">Periode</label>
+                     <Label htmlFor="academic-period" className="text-sm font-medium mb-2 block">Periode</Label>
                     <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
                         <SelectTrigger id="academic-period">
                             <SelectValue placeholder="Pilih Periode" />
@@ -516,12 +516,16 @@ export default function ParentDashboardPage() {
                   const periodInterval = { start: parseISO(selectedPeriod.start_date), end: parseISO(selectedPeriod.end_date) };
                   return isWithinInterval(leaveStartDate, periodInterval);
               }) : [];
+              
+              const validRequests = filteredRequests.filter(lr => lr.status !== 'DIBATALKAN');
+              const canceledRequests = filteredRequests.filter(lr => lr.status === 'DIBATALKAN');
 
-              const sakitAttendance = filteredRequests.filter(lr => lr.leave_type === 'Sakit');
-              const izinAttendance = filteredRequests.filter(lr => lr.leave_type === 'Izin');
+              const sakitAttendance = validRequests.filter(lr => lr.leave_type === 'Sakit');
+              const izinAttendance = validRequests.filter(lr => lr.leave_type === 'Izin');
               
               const totalSakitDays = sakitAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
               const totalIzinDays = izinAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
+              const isSingleDayLeave = activeLeave ? differenceInCalendarDays(parseISO(activeLeave.end_date), parseISO(activeLeave.start_date)) === 0 : false;
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
@@ -571,9 +575,15 @@ export default function ParentDashboardPage() {
                                 <div className="text-xs text-yellow-600">Izin</div>
                                 <div className="text-sm font-semibold text-yellow-700">{izinAttendance.length} kali ({totalIzinDays} hari)</div>
                             </div>
+                            {canceledRequests.length > 0 && (
+                               <div className="bg-gray-100 rounded-lg p-3">
+                                    <div className="text-xs text-gray-600">Dibatalkan</div>
+                                    <div className="text-sm font-semibold text-gray-700">{canceledRequests.length} kali</div>
+                                </div>
+                            )}
                         </div>
                          <div className="bg-slate-100 rounded-lg p-3 flex flex-col justify-center items-center text-center">
-                            <div className="text-xs text-slate-600">Total Izin</div>
+                            <div className="text-xs text-slate-600">Total Absensi</div>
                             <div className="text-lg font-bold text-slate-900">{sakitAttendance.length + izinAttendance.length} kali</div>
                             <div className="text-sm text-slate-800">({totalSakitDays + totalIzinDays} hari)</div>
                         </div>
@@ -588,10 +598,12 @@ export default function ParentDashboardPage() {
                             <RefreshCw className="mr-2 h-4 w-4" />
                             Perpanjang
                         </Button>
-                        <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(activeLeave)}>
-                            <Check className="mr-2 h-4 w-4" />
-                            Sudah Masuk
-                        </Button>
+                        {!isSingleDayLeave && (
+                            <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(activeLeave)}>
+                                <Check className="mr-2 h-4 w-4" />
+                                Sudah Masuk
+                            </Button>
+                        )}
                         <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToCancel(activeLeave)}>
                             <X className="mr-2 h-4 w-4" />
                             Batalkan
@@ -628,7 +640,7 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        <b>Izin ini</b> akan tercatat sebagai <b>&quot;Dibatalkan&quot;</b> di Riwayat. Dokumen Pendukung <b>izin ini</b> yang terunggah (jika ada) akan <b>dihapus dari sistem.</b>
+                         <b>Izin ini</b> akan tercatat sebagai <b>"Dibatalkan"</b> di Riwayat. Dokumen Pendukung <b>izin ini</b> yang terunggah (jika ada) akan <b>dihapus dari sistem.</b>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
