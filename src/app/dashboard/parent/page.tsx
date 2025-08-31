@@ -4,6 +4,9 @@ import Link from "next/link";
 import * as React from "react";
 import { supabase } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,10 +41,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from "@/components/ui/sheet";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +76,9 @@ type LeaveRequest = {
     reason: string | null;
     status: 'AKTIF' | 'SELESAI' | 'DIBATALKAN';
     document_url: string | null;
+    students: {
+        full_name: string;
+    } | null;
 };
 
 
@@ -87,6 +98,11 @@ const getBadgeInfo = (activeLeave: StudentData['leave_requests'][0] | undefined)
     return { text: "Status Tidak Diketahui", className: "bg-gray-100 text-gray-800 border-gray-200" };
 }
 
+const extendFormSchema = z.object({
+  duration: z.enum(["1", "2", "3"], { required_error: "Anda harus memilih durasi perpanjangan." }),
+  reason: z.string().optional(),
+});
+
 
 export default function ParentDashboardPage() {
   const router = useRouter();
@@ -98,10 +114,34 @@ export default function ParentDashboardPage() {
   const [selectedAcademicYear, setSelectedAcademicYear] = React.useState<string | null>(null);
   const [selectedPeriodId, setSelectedPeriodId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [leaveToCancel, setLeaveToCancel] = React.useState<LeaveRequest | null>(null);
+
+  const [isCompleting, setIsCompleting] = React.useState(false);
+  const [leaveToComplete, setLeaveToComplete] = React.useState<LeaveRequest | null>(null);
+
+  const [isExtending, setIsExtending] = React.useState(false);
+  const [leaveToExtend, setLeaveToExtend] = React.useState<LeaveRequest | null>(null);
+
+  const form = useForm<z.infer<typeof extendFormSchema>>({
+    resolver: zodResolver(extendFormSchema),
+    defaultValues: {
+      duration: "1",
+      reason: "",
+    },
+  });
   
+  const watchDuration = form.watch("duration");
   
+  const newEndDate = React.useMemo(() => {
+    if (!leaveToExtend || !watchDuration) return null;
+    const currentEndDate = parseISO(leaveToExtend.end_date);
+    const extensionDays = parseInt(watchDuration, 10);
+    return addDays(currentEndDate, extensionDays);
+  }, [leaveToExtend, watchDuration]);
+
+
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
     const years = new Set(allAcademicPeriods.map(p => p.academic_year));
@@ -177,7 +217,7 @@ export default function ParentDashboardPage() {
                 id,
                 full_name,
                 classes ( class_name ),
-                leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url )
+                leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )
             `)
             .in('id', studentIds);
         
@@ -205,15 +245,13 @@ export default function ParentDashboardPage() {
     setIsCancelling(true);
 
     try {
-        // Step 1: Delete document from Storage if it exists
         if (leaveToCancel.document_url) {
             const pathSegments = leaveToCancel.document_url.split('/public/dokumen_izin/');
-            const path = pathSegments.length > 1 ? pathSegments[1] : null;
+            const path = pathSegments.length > 1 ? decodeURIComponent(pathSegments[1]) : null;
             
             if (path) {
-                const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([decodeURIComponent(path)]);
+                const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
                 if (storageError) {
-                    // Log the error but don't block the process, as the user's main goal is to cancel the request.
                     console.error("Failed to delete document, but continuing with cancellation:", storageError);
                     toast({
                         variant: "destructive",
@@ -224,22 +262,18 @@ export default function ParentDashboardPage() {
             }
         }
 
-        // Step 2: Update the leave request status in the database
         const { error: dbError } = await supabase
             .from('leave_requests')
             .update({ status: 'DIBATALKAN' })
             .eq('id', leaveToCancel.id);
 
-        if (dbError) {
-            throw dbError;
-        }
+        if (dbError) throw dbError;
 
         toast({
             title: "Izin Dibatalkan",
             description: "Pemberitahuan izin telah berhasil dibatalkan."
         });
 
-        // Step 3: Refresh data
         await fetchProfileAndData();
 
     } catch (error: any) {
@@ -253,10 +287,75 @@ export default function ParentDashboardPage() {
         setLeaveToCancel(null);
     }
   };
+
+  const handleConfirmComplete = async () => {
+    if (!leaveToComplete) return;
+
+    setIsCompleting(true);
+    try {
+      const today = new Date();
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ status: 'SELESAI', end_date: format(today, 'yyyy-MM-dd') })
+        .eq('id', leaveToComplete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status Diperbarui',
+        description: 'Status izin telah ditandai sebagai "Selesai".',
+      });
+      await fetchProfileAndData();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Memperbarui Status',
+        description: error.message || 'Terjadi kesalahan pada server.',
+      });
+    } finally {
+      setIsCompleting(false);
+      setLeaveToComplete(null);
+    }
+  };
+
+  const handleExtendSubmit = async (values: z.infer<typeof extendFormSchema>) => {
+      if (!leaveToExtend || !newEndDate) return;
+      setIsExtending(true);
+
+      try {
+          const newReason = `(Perpanjangan: ${values.reason || 'Tidak ada alasan tambahan'})`;
+          const updatedReason = leaveToExtend.reason ? `${leaveToExtend.reason}\n${newReason}` : newReason;
+
+          const { error } = await supabase
+              .from('leave_requests')
+              .update({ 
+                  end_date: format(newEndDate, 'yyyy-MM-dd'),
+                  reason: updatedReason 
+              })
+              .eq('id', leaveToExtend.id);
+          
+          if (error) throw error;
+
+          toast({
+              title: "Izin Diperpanjang",
+              description: `Izin untuk ${leaveToExtend.students?.full_name} berhasil diperpanjang.`,
+          });
+          
+          await fetchProfileAndData();
+      } catch (error: any) {
+          toast({
+              variant: "destructive",
+              title: "Gagal Memperpanjang Izin",
+              description: error.message || "Terjadi kesalahan pada server.",
+          });
+      } finally {
+          setIsExtending(false);
+          setLeaveToExtend(null);
+      }
+  };
   
   const handleYearChange = (year: string) => {
     setSelectedAcademicYear(year);
-    // Auto-select the first period of the new year
     const firstPeriod = allAcademicPeriods.find(p => p.academic_year === year);
     if(firstPeriod) setSelectedPeriodId(firstPeriod.id);
   }
@@ -484,13 +583,13 @@ export default function ParentDashboardPage() {
                  <div className="flex gap-2 flex-wrap">
                     {activeLeave ? (
                      <>
-                        <Button variant="outline" size="sm" className="flex-1">
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Perpanjang
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setLeaveToExtend(activeLeave)}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Perpanjang
                         </Button>
-                        <Button size="sm" className="flex-1">
-                        <Check className="mr-2 h-4 w-4" />
-                        Sudah Masuk
+                        <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(activeLeave)}>
+                            <Check className="mr-2 h-4 w-4" />
+                            Sudah Masuk
                         </Button>
                         <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToCancel(activeLeave)}>
                             <X className="mr-2 h-4 w-4" />
@@ -542,6 +641,119 @@ export default function ParentDashboardPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <AlertDialog open={!!leaveToComplete} onOpenChange={(open) => !open && setLeaveToComplete(null)}>
+            <AlertDialogContent className="max-w-sm rounded-2xl">
+                <AlertDialogHeader className="text-center items-center">
+                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+                        <Check className="h-6 w-6 text-green-600" />
+                    </div>
+                    <AlertDialogTitle className="text-lg">Konfirmasi Siswa Sudah Masuk?</AlertDialogTitle>
+                    <AlertDialogDescription className="pt-2">
+                        Aksi ini akan mengubah status izin dari <b>AKTIF</b> menjadi <b>SELESAI</b>. Tanggal akhir izin akan disesuaikan menjadi hari ini.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
+                    <AlertDialogCancel onClick={() => setLeaveToComplete(null)} disabled={isCompleting}>
+                        Batal
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmComplete} disabled={isCompleting} className="bg-primary hover:bg-primary/90">
+                        {isCompleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Ya, Konfirmasi Sudah Masuk
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <Sheet open={!!leaveToExtend} onOpenChange={(open) => { if (!open) setLeaveToExtend(null); }}>
+            <SheetContent className="flex flex-col">
+                 <SheetHeader>
+                    <SheetTitle>Perpanjang Izin</SheetTitle>
+                    <SheetDescription>
+                        Perpanjang izin untuk <strong>{leaveToExtend?.students?.full_name}</strong>. Pilih durasi perpanjangan dan berikan keterangan jika perlu.
+                    </SheetDescription>
+                </SheetHeader>
+                
+                <div className="py-4 flex-1 overflow-y-auto">
+                    <Card className="mb-4">
+                        <CardContent className="p-3 text-sm">
+                            <p><strong>Izin Saat Ini:</strong> {leaveToExtend?.leave_type}</p>
+                            <p><strong>Berlaku hingga:</strong> {leaveToExtend ? format(parseISO(leaveToExtend.end_date), "EEEE, d MMMM yyyy", { locale: id }) : '-'}</p>
+                        </CardContent>
+                    </Card>
+                    <Form {...form}>
+                        <form id="extend-form" onSubmit={form.handleSubmit(handleExtendSubmit)} className="space-y-6">
+                             <FormField
+                                control={form.control}
+                                name="duration"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                    <FormLabel>Perpanjang Selama</FormLabel>
+                                    <FormControl>
+                                        <RadioGroup
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                        className="flex items-center space-x-4"
+                                        >
+                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                            <FormControl><RadioGroupItem value="1" /></FormControl>
+                                            <FormLabel className="font-normal">1 Hari</FormLabel>
+                                        </FormItem>
+                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                            <FormControl><RadioGroupItem value="2" /></FormControl>
+                                            <FormLabel className="font-normal">2 Hari</FormLabel>
+                                        </FormItem>
+                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                            <FormControl><RadioGroupItem value="3" /></FormControl>
+                                            <FormLabel className="font-normal">3 Hari</FormLabel>
+                                        </FormItem>
+                                        </RadioGroup>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="space-y-2">
+                                <Label>Tanggal Selesai Baru</Label>
+                                <Input 
+                                    readOnly 
+                                    value={newEndDate ? format(newEndDate, "EEEE, d MMMM yyyy", { locale: id }) : "..."}
+                                    className="bg-muted/50"
+                                />
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="reason"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Alasan Perpanjangan (Opsional)</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                            placeholder="Contoh: Sesuai anjuran dokter, perlu istirahat tambahan."
+                                            {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </form>
+                    </Form>
+                </div>
+
+                <SheetFooter>
+                    <SheetClose asChild>
+                        <Button type="button" variant="outline" disabled={isExtending}>Batal</Button>
+                    </SheetClose>
+                    <Button type="submit" form="extend-form" disabled={isExtending}>
+                        {isExtending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Kirim Perpanjangan
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
       </main>
     </div>
   );
