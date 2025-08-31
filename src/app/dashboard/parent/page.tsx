@@ -50,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -222,8 +222,42 @@ export default function ParentDashboardPage() {
             `)
             .in('id', studentIds);
         
-        if (studentData) setStudents(studentData as StudentData[]);
-        if (studentsError) console.error("Error fetching student data:", studentsError);
+        if (studentsError) {
+          console.error("Error fetching student data:", studentsError);
+        } else if (studentData) {
+            let dataNeedsRefresh = false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const updatePromises = studentData.flatMap(student => 
+                student.leave_requests
+                    .filter(lr => lr.status === 'AKTIF' && isPast(parseISO(lr.end_date)))
+                    .map(lr => {
+                        dataNeedsRefresh = true;
+                        console.log(`Updating expired leave request ${lr.id} for student ${student.full_name}`);
+                        return supabase.from('leave_requests').update({ status: 'SELESAI' }).eq('id', lr.id);
+                    })
+            );
+
+            if (dataNeedsRefresh) {
+                await Promise.all(updatePromises);
+                // Refetch data if any status was updated
+                const { data: refreshedStudentData, error: refreshedError } = await supabase
+                    .from('students')
+                    .select(`
+                        id,
+                        full_name,
+                        classes ( class_name ),
+                        leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )
+                    `)
+                    .in('id', studentIds);
+                
+                if (refreshedError) console.error("Error refetching student data:", refreshedError);
+                setStudents((refreshedStudentData as StudentData[]) || []);
+            } else {
+                setStudents(studentData as StudentData[]);
+            }
+        }
     }
     
     setLoading(false);
@@ -787,5 +821,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
