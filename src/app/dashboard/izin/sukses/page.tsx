@@ -43,7 +43,7 @@ function SuccessContent() {
                 title: 'ID Izin Tidak Ditemukan',
                 description: 'Tidak dapat memuat detail, mengarahkan kembali ke dasbor.',
             });
-            router.replace('/dashboard/parent');
+            router.replace('/dashboard');
             return;
         }
 
@@ -74,7 +74,7 @@ function SuccessContent() {
                     title: 'Gagal Memuat Data',
                     description: 'Tidak dapat menemukan detail izin yang baru saja dibuat.',
                 });
-                router.replace('/dashboard/parent');
+                router.replace('/dashboard');
             } else {
                 setLeaveRequest(data as LeaveRequestData);
             }
@@ -134,21 +134,20 @@ function SuccessContent() {
 
     const handleShareToWhatsApp = () => {
         const encodedMessage = encodeURIComponent(whatsappMessage);
-        window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank');
+        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
     };
-
+    
     if (loading) {
         return (
             <Card className="w-full max-w-md shadow-lg rounded-xl">
-                <CardHeader className="text-center">
+                <CardHeader className="text-center p-6">
                     <div className="flex justify-center mb-4">
                         <Skeleton className="w-16 h-16 rounded-full" />
                     </div>
                     <Skeleton className="h-7 w-48 mx-auto" />
                     <Skeleton className="h-4 w-full max-w-xs mx-auto mt-2" />
-                    <Skeleton className="h-4 w-full max-w-sm mx-auto mt-1" />
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-6 pt-0 space-y-4">
                     <Skeleton className="h-20 w-full" />
                     <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-28 w-full" />
@@ -166,7 +165,7 @@ function SuccessContent() {
 
     return (
         <Card className="w-full max-w-md text-center shadow-lg rounded-xl">
-            <CardHeader>
+            <CardHeader className="p-6">
                 <div className="flex justify-center mb-4">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                         <CircleCheckBig className="w-8 h-8 text-green-600" />
@@ -177,12 +176,12 @@ function SuccessContent() {
                     Pemberitahuan izin untuk {leaveRequest.students?.full_name || 'siswa'} berhasil dikirim dan dicatat dalam sistem.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 pt-0 space-y-4">
                 <div className="bg-gray-50 rounded-lg p-3 text-left border">
                     <h4 className="font-semibold text-sm mb-2 text-gray-800">Detail Pemberitahuan:</h4>
                     <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                         <div>• Jenis: {leaveRequest.leave_type}</div>
-                        <div>• Tanggal: {format(parseISO(leaveRequest.start_date), "dd/M/yyyy")} ({durationDays} hari)</div>
+                        <div>• Tanggal: {format(parseISO(leaveRequest.start_date), "dd/M/yyyy", { locale: id })} ({durationDays} hari)</div>
                         {leaveRequest.reason && <div>• Alasan: {leaveRequest.reason}</div>}
                     </div>
                 </div>
@@ -201,7 +200,7 @@ function SuccessContent() {
                         <span className="font-medium">Bagikan Template WhatsApp</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white border-green-600" onClick={handleShareToWhatsApp}>
+                        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={handleShareToWhatsApp}>
                             <MessageCircle className="w-3 h-3 mr-1" />
                             Kirim ke Grup Kelas
                         </Button>
@@ -212,7 +211,7 @@ function SuccessContent() {
                     </div>
                 </div>
 
-                <Link href="/dashboard/parent" className="!mt-6">
+                <Link href="/dashboard" className="!mt-6 block">
                     <Button className="w-full">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Kembali ke Dashboard
@@ -226,8 +225,24 @@ function SuccessContent() {
 
 export default function SuccessPage() {
     return (
-        <main className="flex min-h-screen w-full items-center justify-center bg-muted/10 p-4">
-             <Suspense fallback={<div>Loading...</div>}>
+        <main className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4">
+             <Suspense fallback={
+                <Card className="w-full max-w-md shadow-lg rounded-xl">
+                    <CardHeader className="text-center p-6">
+                        <div className="flex justify-center mb-4">
+                            <Skeleton className="w-16 h-16 rounded-full" />
+                        </div>
+                        <Skeleton className="h-7 w-48 mx-auto" />
+                        <Skeleton className="h-4 w-full max-w-xs mx-auto mt-2" />
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0 space-y-4">
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-28 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                </Card>
+             }>
                 <SuccessContent />
              </Suspense>
         </main>
