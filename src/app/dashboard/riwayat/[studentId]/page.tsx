@@ -51,7 +51,8 @@ type Student = {
 };
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = use(params);
+  const resolvedParams = use(params);
+  const { studentId } = resolvedParams;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,16 +214,18 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       <header className="bg-white shadow-sm border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-14 sm:h-16">
-                <Link href="/dashboard">
+                <Link href="/dashboard" className="flex items-center gap-2">
                     <Button variant="ghost" size="icon">
                         <ArrowLeft className="w-5 h-5" />
                         <span className="sr-only">Kembali</span>
                     </Button>
+                     <div>
+                        <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          {student.full_name} - Kelas {student.classes?.class_name || 'N/A'}
+                        </p>
+                    </div>
                 </Link>
-                <div className="text-center">
-                    <h1 className="text-base sm:text-lg font-semibold text-gray-900">Riwayat Perizinan</h1>
-                    <p className="text-xs sm:text-sm text-gray-600">{student.full_name}</p>
-                </div>
                 <Avatar className="w-9 h-9">
                     <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.full_name} />
                     <AvatarFallback className="bg-primary/10 text-primary">
@@ -234,21 +237,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="flex items-center space-x-4">
-            <Avatar className="w-16 h-16 border-2 border-primary/20">
-                <AvatarImage src={`https://i.pravatar.cc/150?u=${student.id}`} alt={student.full_name} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                    {student.full_name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{student.full_name}</h1>
-              <p className="text-md text-muted-foreground">
-                Kelas {student.classes?.class_name || 'N/A'}
-              </p>
-            </div>
-        </div>
-
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <StatCard icon={BookUser} title="Total Izin" value={stats.total} color="text-blue-600" />
             <StatCard icon={Clock} title="Aktif" value={stats.active} color="text-yellow-600" />
@@ -390,3 +378,5 @@ function StatCard({ icon: Icon, title, value, color }: { icon: React.ElementType
         </Card>
     )
 }
+
+    
