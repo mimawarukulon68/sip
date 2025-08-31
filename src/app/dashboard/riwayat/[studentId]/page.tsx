@@ -21,11 +21,11 @@ import {
   Thermometer,
   ClipboardList,
   ArrowLeft,
-  Loader2,
   BookUser,
   Archive,
+  Ban,
   ArchiveX,
-  Ban
+  TrendingDown
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -190,15 +190,16 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     );
   }
   
-  const stats = {
-    total: leaveRequests.length,
-    active: leaveRequests.filter(r => r.status === 'AKTIF').length,
-    completed: leaveRequests.filter(r => r.status === 'SELESAI').length,
-    cancelled: leaveRequests.filter(r => r.status === 'DIBATALKAN').length,
-    sick: leaveRequests.filter(r => r.status !== 'DIBATALKAN' && r.leave_type === 'Sakit').length,
-    permit: leaveRequests.filter(r => r.status !== 'DIBATALKAN' && r.leave_type === 'Izin').length,
-  };
+  const validRequests = leaveRequests.filter(r => r.status === 'AKTIF' || r.status === 'SELESAI');
+  const sickRequests = validRequests.filter(r => r.leave_type === 'Sakit');
+  const permitRequests = validRequests.filter(r => r.leave_type === 'Izin');
+  const activeRequests = leaveRequests.filter(r => r.status === 'AKTIF').length;
+  const completedRequests = leaveRequests.filter(r => r.status === 'SELESAI').length;
+  const cancelledRequests = leaveRequests.filter(r => r.status === 'DIBATALKAN').length;
 
+  const totalSickDays = sickRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
+  const totalPermitDays = permitRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
+  const totalValidDays = totalSickDays + totalPermitDays;
 
   return (
     <div className="min-h-screen w-full flex-col bg-muted/10">
@@ -238,61 +239,59 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                   Ringkasan Perizinan
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+            <CardContent className="space-y-4 text-sm">
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                           <Thermometer className="w-5 h-5 text-red-600" />
+                        <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
+                            <TrendingDown className="w-5 h-5 text-slate-600" />
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-700">{stats.sick}</p>
-                            <p className="text-xs text-muted-foreground">Sakit</p>
-                        </div>
+                        <p className="font-semibold text-slate-800">Total Absensi</p>
                     </div>
-                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                           <ClipboardList className="w-5 h-5 text-blue-600" />
+                    <p className="font-bold text-base text-slate-900">{validRequests.length} kali ({totalValidDays} hari)</p>
+                </div>
+
+                <hr/>
+
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-red-700">
+                            <Thermometer className="w-5 h-5" />
+                            <p>Sakit</p>
                         </div>
-                        <div>
-                           <p className="font-semibold text-gray-700">{stats.permit}</p>
-                            <p className="text-xs text-muted-foreground">Izin</p>
-                        </div>
+                        <p className="font-semibold">{sickRequests.length} kali ({totalSickDays} hari)</p>
                     </div>
-                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-blue-700">
+                           <ClipboardList className="w-5 h-5" />
+                           <p>Izin</p>
+                        </div>
+                        <p className="font-semibold">{permitRequests.length} kali ({totalPermitDays} hari)</p>
+                    </div>
+                </div>
+                
+                <hr />
+
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <div className="flex items-center gap-3">
                            <CheckCircle className="w-5 h-5 text-green-600" />
+                           <p>Izin Selesai</p>
                         </div>
-                        <div>
-                           <p className="font-semibold text-gray-700">{stats.completed}</p>
-                            <p className="text-xs text-muted-foreground">Selesai</p>
-                        </div>
+                        <p className="font-semibold text-green-700">{completedRequests} kali</p>
                     </div>
-                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                           <XCircle className="w-5 h-5 text-gray-600" />
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                            <Clock className="w-5 h-5 text-yellow-600" />
+                            <p>Izin Aktif</p>
                         </div>
-                        <div>
-                           <p className="font-semibold text-gray-700">{stats.cancelled}</p>
-                           <p className="text-xs text-muted-foreground">Dibatalkan</p>
-                        </div>
+                         <p className="font-semibold text-yellow-700">{activeRequests} kali</p>
                     </div>
-                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
-                           <Clock className="w-5 h-5 text-yellow-600" />
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                            <Ban className="w-5 h-5 text-red-600" />
+                            <p>Izin Dibatalkan</p>
                         </div>
-                        <div>
-                           <p className="font-semibold text-gray-700">{stats.active}</p>
-                            <p className="text-xs text-muted-foreground">Aktif</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                           <Archive className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div>
-                           <p className="font-semibold text-gray-700">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total</p>
-                        </div>
+                        <p className="font-semibold text-red-700">{cancelledRequests} kali</p>
                     </div>
                 </div>
             </CardContent>
@@ -417,5 +416,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
-    
