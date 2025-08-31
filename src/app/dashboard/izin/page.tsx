@@ -58,7 +58,7 @@ const formSchema = z.object({
   }),
   endDate: z.date().optional(),
   reasonText: z.string().optional(),
-  document: z.instanceof(FileList).optional(),
+  document: z.any().optional(),
 });
 
 type StudentData = {
