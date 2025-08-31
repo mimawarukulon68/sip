@@ -31,7 +31,8 @@ import {
   BookUser,
   Archive,
   ArchiveX,
-  Info
+  Info,
+  XCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -241,7 +242,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
               </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+               <div className="grid grid-cols-2 gap-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                       <div className="flex items-center justify-center text-red-800 text-sm gap-2">
                           <Thermometer className="w-4 h-4" />
@@ -347,7 +348,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center">
-              <Calendar className="w-5 h-5 mr-2" />
+              <History className="w-5 h-5 mr-2" />
               Detail Riwayat
             </h2>
             <Badge variant="outline">
@@ -368,24 +369,16 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredRequests.map((request) => (
                 <Card key={request.id} className="flex flex-col">
-                  <CardHeader className="flex flex-row items-start justify-between pb-3">
+                  <CardHeader className="flex-grow flex flex-row items-start justify-between pb-3">
                     <div>
                       <CardTitle className="text-base font-semibold">{request.leave_type}</CardTitle>
                       <CardDescription className="text-xs">{format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}</CardDescription>
                     </div>
                     {getStatusBadge(request.status)}
                   </CardHeader>
-                  <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
-                     <p className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4"/>
-                        <span>Durasi: {calculateDuration(request.start_date, request.end_date)}</span>
-                     </p>
-                     <p className="flex items-center gap-2">
-                        <Clock className="w-4 h-4"/>
-                        <span>Dibuat: {format(parseISO(request.created_at), "d MMM yy, HH:mm", { locale: id })}</span>
-                     </p>
+                  <CardContent className="p-6 pt-0">
                   </CardContent>
-                  <CardFooter>
+                  <CardFooter className="pt-0">
                     <Button variant="secondary" className="w-full" onClick={() => setSelectedRequest(request)}>
                       <Info className="w-4 h-4 mr-2" />
                       Lihat Detail
@@ -428,5 +421,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
-    
