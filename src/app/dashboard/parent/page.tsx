@@ -638,10 +638,12 @@ export default function ParentDashboardPage() {
                     </>
                     )}
                 </div>
-                 <Button variant="outline" size="sm" className="w-full">
-                    <History className="mr-2 h-4 w-4" />
-                    Lihat Riwayat
-                </Button>
+                <Link href={`/dashboard/riwayat/${student.id}`} passHref>
+                    <Button variant="outline" size="sm" className="w-full">
+                        <History className="mr-2 h-4 w-4" />
+                        Lihat Riwayat
+                    </Button>
+                </Link>
               </CardFooter>
             </Card>
           )})}
@@ -785,3 +787,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
