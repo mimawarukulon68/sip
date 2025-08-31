@@ -7,9 +7,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { addDays, format } from "date-fns";
+import { addDays, format, subDays } from "date-fns";
 import { id } from "date-fns/locale";
-import { Calendar as CalendarIcon, Upload, ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, Upload, ArrowLeft, Loader2 } from "lucide-react";
 import { format as formatDate } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -69,6 +79,13 @@ type StudentData = {
     } | null;
 } | null;
 
+type LeaveRequest = {
+  id: string;
+  leave_type: 'Sakit' | 'Izin';
+  start_date: string;
+  end_date: string;
+};
+
 
 export default function PermissionFormPage() {
   const searchParams = useSearchParams();
@@ -79,6 +96,8 @@ export default function PermissionFormPage() {
   const [loading, setLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+  
+  const [extendableLeave, setExtendableLeave] = React.useState<LeaveRequest | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,33 +121,50 @@ export default function PermissionFormPage() {
 
     async function fetchStudentData() {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        const studentPromise = supabase
             .from("students")
-            .select(`
-                id,
-                full_name,
-                classes (
-                    class_name
-                )
-            `)
+            .select(`id, full_name, classes (class_name)`)
             .eq("id", studentId)
             .single();
+        
+        const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+        const leavePromise = supabase
+            .from('leave_requests')
+            .select('id, leave_type, start_date, end_date')
+            .eq('student_id', studentId)
+            .eq('end_date', yesterday)
+            .eq('status', 'SELESAI')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (error || !data) {
+        const [{ data: studentData, error: studentError }, { data: leaveData, error: leaveError }] = await Promise.all([
+          studentPromise, 
+          leavePromise
+        ]);
+
+        if (studentError || !studentData) {
             toast({ variant: "destructive", title: "Gagal memuat data", description: "Tidak dapat menemukan data siswa." });
             router.push("/dashboard");
-        } else {
-            setStudent(data as StudentData);
-            form.reset({
-                studentId: data.id,
-                studentName: data.full_name,
-                studentClass: data.classes?.class_name || "Tidak ada kelas",
-                reasonType: "Sakit",
-                duration: "1",
-                startDate: new Date(),
-                reasonText: "",
-            });
+            return;
         }
+
+        setStudent(studentData as StudentData);
+        form.reset({
+            studentId: studentData.id,
+            studentName: studentData.full_name,
+            studentClass: studentData.classes?.class_name || "Tidak ada kelas",
+            reasonType: "Sakit",
+            duration: "1",
+            startDate: new Date(),
+            reasonText: "",
+        });
+        
+        if (leaveData) {
+            setExtendableLeave(leaveData as LeaveRequest);
+        }
+
         setLoading(false);
     }
 
@@ -298,6 +334,24 @@ export default function PermissionFormPage() {
   const documentRef = form.register("document");
 
   return (
+    <>
+    <AlertDialog open={!!extendableLeave} onOpenChange={(open) => !open && setExtendableLeave(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Izin Baru Saja Berakhir?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Kami melihat izin <strong>{extendableLeave?.leave_type}</strong> untuk <strong>{student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setExtendableLeave(null)}>Buat Izin Baru</AlertDialogCancel>
+                <AlertDialogAction onClick={() => router.push(`/dashboard/parent?extend=${extendableLeave?.id}&student=${student.id}`)}>
+                    Ya, Perpanjang Izin
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
        <header className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -525,7 +579,12 @@ export default function PermissionFormPage() {
                 />
 
                 <Button type="submit" className="w-full text-base font-semibold py-6" disabled={isSubmitting}>
-                   {isSubmitting ? 'Mengirim...' : 'Kirim Pemberitahuan'}
+                   {isSubmitting ? (
+                       <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Mengirim...
+                       </>
+                   ) : 'Kirim Pemberitahuan'}
                 </Button>
               </form>
             </Form>
@@ -542,5 +601,7 @@ export default function PermissionFormPage() {
         </Card>
       </main>
     </div>
+    </>
   );
 }
+

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { supabase } from "@/lib/supabase-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -107,6 +107,7 @@ const extendFormSchema = z.object({
 
 export default function ParentDashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [profile, setProfile] = React.useState<ParentProfile | null>(null);
   const [students, setStudents] = React.useState<StudentData[]>([]);
@@ -155,7 +156,7 @@ export default function ParentDashboardPage() {
   }, [allAcademicPeriods, selectedAcademicYear]);
 
 
-  const fetchProfileAndData = React.useCallback(async () => {
+  const fetchProfileAndData = React.useCallback(async (params?: { autoExtendLeaveId?: string; autoExtendStudentId?: string }) => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -224,14 +225,18 @@ export default function ParentDashboardPage() {
         
         if (studentsError) {
           console.error("Error fetching student data:", studentsError);
-        } else if (studentData) {
+           setLoading(false);
+          return;
+        } 
+        
+        if (studentData) {
             let dataNeedsRefresh = false;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             const updatePromises = studentData.flatMap(student => 
                 student.leave_requests
-                    .filter(lr => lr.status === 'AKTIF' && isPast(parseISO(lr.end_date)))
+                    .filter(lr => lr.status === 'AKTIF' && isPast(addDays(parseISO(lr.end_date), 1)))
                     .map(lr => {
                         dataNeedsRefresh = true;
                         console.log(`Updating expired leave request ${lr.id} for student ${student.full_name}`);
@@ -241,21 +246,25 @@ export default function ParentDashboardPage() {
 
             if (dataNeedsRefresh) {
                 await Promise.all(updatePromises);
-                // Refetch data if any status was updated
                 const { data: refreshedStudentData, error: refreshedError } = await supabase
                     .from('students')
-                    .select(`
-                        id,
-                        full_name,
-                        classes ( class_name ),
-                        leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )
-                    `)
+                    .select(`id, full_name, classes ( class_name ), leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )`)
                     .in('id', studentIds);
                 
                 if (refreshedError) console.error("Error refetching student data:", refreshedError);
                 setStudents((refreshedStudentData as StudentData[]) || []);
+                 if (params?.autoExtendLeaveId && params?.autoExtendStudentId) {
+                    const studentToExtend = refreshedStudentData?.find(s => s.id === params.autoExtendStudentId);
+                    const leaveToExtend = studentToExtend?.leave_requests.find(lr => lr.id === params.autoExtendLeaveId);
+                    if (leaveToExtend) setLeaveToExtend(leaveToExtend);
+                }
             } else {
                 setStudents(studentData as StudentData[]);
+                 if (params?.autoExtendLeaveId && params?.autoExtendStudentId) {
+                    const studentToExtend = studentData.find(s => s.id === params.autoExtendStudentId);
+                    const leaveToExtend = studentToExtend?.leave_requests.find(lr => lr.id === params.autoExtendLeaveId);
+                    if (leaveToExtend) setLeaveToExtend(leaveToExtend);
+                }
             }
         }
     }
@@ -266,8 +275,17 @@ export default function ParentDashboardPage() {
 
 
   React.useEffect(() => {
-    fetchProfileAndData();
-  }, [fetchProfileAndData]);
+    const autoExtendLeaveId = searchParams.get('extend');
+    const autoExtendStudentId = searchParams.get('student');
+    
+    if (autoExtendLeaveId && autoExtendStudentId) {
+        // Clear search params
+        router.replace('/dashboard/parent', {scroll: false});
+        fetchProfileAndData({ autoExtendLeaveId, autoExtendStudentId });
+    } else {
+        fetchProfileAndData();
+    }
+  }, [fetchProfileAndData, searchParams, router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -365,7 +383,8 @@ export default function ParentDashboardPage() {
               .from('leave_requests')
               .update({ 
                   end_date: format(newEndDate, 'yyyy-MM-dd'),
-                  reason: updatedReason 
+                  reason: updatedReason,
+                  status: 'AKTIF' // ensure status is active
               })
               .eq('id', leaveToExtend.id);
           
@@ -376,7 +395,9 @@ export default function ParentDashboardPage() {
               description: `Izin untuk ${leaveToExtend.students?.full_name} berhasil diperpanjang.`,
           });
           
+          setLeaveToExtend(null);
           await fetchProfileAndData();
+
       } catch (error: any) {
           toast({
               variant: "destructive",
@@ -385,7 +406,6 @@ export default function ParentDashboardPage() {
           });
       } finally {
           setIsExtending(false);
-          setLeaveToExtend(null);
       }
   };
   
@@ -395,7 +415,7 @@ export default function ParentDashboardPage() {
     if(firstPeriod) setSelectedPeriodId(firstPeriod.id);
   }
 
-  if (loading) {
+  if (loading && !leaveToExtend) {
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/10">
             <header className="bg-white shadow-sm border-b">
