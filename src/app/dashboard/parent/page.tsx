@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Ban, Thermometer, FileText, Archive } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays } from "date-fns";
 import { id } from "date-fns/locale";
@@ -594,9 +594,9 @@ export default function ParentDashboardPage() {
                                 <div className="text-sm text-slate-800">({totalValidDays} hari)</div>
                             </div>
                         </div>
-                        <div className="bg-gray-100 rounded-lg p-3">
-                            <div className="flex items-center text-xs text-gray-600 gap-2">
-                                <Ban className="h-4 w-4" />
+                         <div className="bg-gray-100 rounded-lg p-3 text-center">
+                            <div className="flex items-center justify-center text-xs text-gray-600 gap-2">
+                                <ArchiveX className="h-4 w-4" />
                                 <span>Izin Dibatalkan</span>
                             </div>
                             <div className="text-sm font-semibold text-gray-700 mt-1">{canceledRequests.length} kali</div>
@@ -785,5 +785,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
