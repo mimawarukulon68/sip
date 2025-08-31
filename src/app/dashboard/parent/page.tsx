@@ -208,7 +208,7 @@ export default function ParentDashboardPage() {
         // Step 1: Delete document from Storage if it exists
         if (leaveToCancel.document_url) {
             const pathSegments = leaveToCancel.document_url.split('/public/dokumen_izin/');
-            const path = pathSegments[1];
+            const path = pathSegments.length > 1 ? pathSegments[1] : null;
             
             if (path) {
                 const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([decodeURIComponent(path)]);
