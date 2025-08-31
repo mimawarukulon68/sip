@@ -21,9 +21,6 @@ import {
   History, 
   Search, 
   Filter, 
-  Calendar,
-  FileText,
-  Clock,
   CheckCircle,
   Thermometer,
   ClipboardList,
@@ -32,6 +29,7 @@ import {
   Archive,
   ArchiveX,
   Info,
+  Clock,
   XCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
@@ -369,10 +367,17 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredRequests.map((request) => (
                 <Card key={request.id} className="flex flex-col">
-                  <CardHeader className="flex-grow flex flex-row items-start justify-between pb-3">
+                  <CardHeader className="flex-grow flex flex-row items-center justify-between pb-3">
                     <div>
-                      <CardTitle className="text-base font-semibold">{request.leave_type}</CardTitle>
-                      <CardDescription className="text-xs">{format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}</CardDescription>
+                        <CardTitle className="text-base font-semibold flex items-center gap-2">
+                            {request.leave_type}
+                            <span className="text-sm font-normal text-muted-foreground">
+                                ({calculateDuration(request.start_date, request.end_date)})
+                            </span>
+                        </CardTitle>
+                      <CardDescription className="text-xs">
+                        {format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}
+                      </CardDescription>
                     </div>
                     {getStatusBadge(request.status)}
                   </CardHeader>
@@ -421,3 +426,4 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
+
