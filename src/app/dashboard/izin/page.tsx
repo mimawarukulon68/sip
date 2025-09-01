@@ -7,9 +7,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { addDays, format, subDays } from "date-fns";
+import { addDays, format, subDays, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
-import { Calendar as CalendarIcon, Upload, ArrowLeft, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Upload, ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { format as formatDate } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ const formSchema = z.object({
   endDate: z.date().optional(),
   reasonText: z.string().optional(),
   document: z.any().optional(),
+  parentLeaveId: z.string().optional(),
 });
 
 type StudentData = {
@@ -91,12 +92,16 @@ export default function PermissionFormPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const studentId = searchParams.get("studentId");
+  const extendLeaveId = searchParams.get("extend");
   const { toast } = useToast();
+  
   const [student, setStudent] = React.useState<StudentData>(null);
   const [loading, setLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   
+  const [isExtensionMode, setIsExtensionMode] = React.useState(false);
+  const [originalLeave, setOriginalLeave] = React.useState<LeaveRequest | null>(null);
   const [extendableLeave, setExtendableLeave] = React.useState<LeaveRequest | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -109,6 +114,7 @@ export default function PermissionFormPage() {
       duration: "1",
       startDate: undefined, 
       reasonText: "",
+      parentLeaveId: extendLeaveId || undefined,
     },
   });
 
@@ -119,7 +125,7 @@ export default function PermissionFormPage() {
         return;
     }
 
-    async function fetchStudentData() {
+    async function fetchInitialData() {
         setLoading(true);
         
         const studentPromise = supabase
@@ -127,9 +133,14 @@ export default function PermissionFormPage() {
             .select(`id, full_name, classes (class_name)`)
             .eq("id", studentId)
             .single();
+
+        const extendPromise = extendLeaveId
+          ? supabase.from('leave_requests').select('id, leave_type, start_date, end_date').eq('id', extendLeaveId).single()
+          : Promise.resolve({ data: null, error: null });
         
         const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-        const leavePromise = supabase
+        const suggestPromise = !extendLeaveId 
+          ? supabase
             .from('leave_requests')
             .select('id, leave_type, start_date, end_date')
             .eq('student_id', studentId)
@@ -137,11 +148,17 @@ export default function PermissionFormPage() {
             .eq('status', 'SELESAI')
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .single()
+          : Promise.resolve({ data: null, error: null });
 
-        const [{ data: studentData, error: studentError }, { data: leaveData, error: leaveError }] = await Promise.all([
-          studentPromise, 
-          leavePromise
+        const [
+          { data: studentData, error: studentError },
+          { data: extendData, error: extendError },
+          { data: suggestData, error: suggestError }
+        ] = await Promise.all([
+          studentPromise,
+          extendPromise,
+          suggestPromise
         ]);
 
         if (studentError || !studentData) {
@@ -151,26 +168,46 @@ export default function PermissionFormPage() {
         }
 
         setStudent(studentData as StudentData);
-        form.reset({
-            studentId: studentData.id,
-            studentName: studentData.full_name,
-            studentClass: studentData.classes?.class_name || "Tidak ada kelas",
-            reasonType: "Sakit",
-            duration: "1",
-            startDate: new Date(),
-            reasonText: "",
-        });
-        
-        if (leaveData) {
-            setExtendableLeave(leaveData as LeaveRequest);
+
+        if (extendLeaveId) {
+            if (extendError || !extendData) {
+                toast({ variant: "destructive", title: "Error", description: "Izin yang akan diperpanjang tidak ditemukan." });
+                router.push("/dashboard/parent");
+                return;
+            }
+            setIsExtensionMode(true);
+            setOriginalLeave(extendData as LeaveRequest);
+            form.reset({
+                studentId: studentData.id,
+                studentName: studentData.full_name,
+                studentClass: studentData.classes?.class_name || "Tidak ada kelas",
+                reasonType: extendData.leave_type,
+                duration: "1",
+                startDate: addDays(parseISO(extendData.end_date), 1),
+                reasonText: "",
+                parentLeaveId: extendLeaveId,
+            });
+        } else {
+            form.reset({
+                studentId: studentData.id,
+                studentName: studentData.full_name,
+                studentClass: studentData.classes?.class_name || "Tidak ada kelas",
+                reasonType: "Sakit",
+                duration: "1",
+                startDate: new Date(),
+                reasonText: "",
+            });
+            if (suggestData) {
+                setExtendableLeave(suggestData as LeaveRequest);
+            }
         }
 
         setLoading(false);
     }
 
-    fetchStudentData();
+    fetchInitialData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, router, toast]);
+  }, [studentId, extendLeaveId, router, toast]);
 
 
   const watchDuration = form.watch("duration");
@@ -185,7 +222,7 @@ export default function PermissionFormPage() {
   }, [watchStartDate, watchDuration, form]);
   
   const handleDateSelect = (date: Date | undefined) => {
-    if(!date) return;
+    if(!date || isExtensionMode) return;
     const today = new Date();
     today.setHours(0, 0, 0, 0); 
     if(date < today) {
@@ -208,14 +245,15 @@ export default function PermissionFormPage() {
 
     const durationDays = parseInt(values.duration, 10);
     const startDateFormatted = format(values.startDate, "EEEE, d MMMM yyyy", { locale: id });
+    const messageAction = isExtensionMode ? "memperpanjang izin" : "tidak dapat masuk sekolah";
 
     let message: string;
 
     if(durationDays === 1){
-         message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah pada hari ini, ${startDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+         message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} ${messageAction} pada hari ini, ${startDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
     } else {
         const endDateFormatted = format(values.endDate, "EEEE, d MMMM yyyy", { locale: id });
-        message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} tidak dapat masuk sekolah selama ${durationDays} hari, dari tanggal ${startDateFormatted} s.d. ${endDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
+        message = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu Wali Kelas ${values.studentClass}\n\nDengan ini kami beritahukan bahwa ananda ${values.studentName} ${messageAction} selama ${durationDays} hari, dari tanggal ${startDateFormatted} s.d. ${endDateFormatted} dikarenakan ${values.reasonType.toLowerCase()}.`;
     }
     
     if(values.reasonText) {
@@ -226,7 +264,7 @@ export default function PermissionFormPage() {
 
     return message;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.watch()]);
+  }, [form.watch(), isExtensionMode]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -278,7 +316,8 @@ export default function PermissionFormPage() {
         start_date: format(values.startDate, "yyyy-MM-dd"),
         end_date: format(values.endDate || values.startDate, "yyyy-MM-dd"),
         status: 'AKTIF',
-        document_url: documentUrl
+        document_url: documentUrl,
+        parent_leave_id: values.parentLeaveId || null
     }).select().single();
 
     setIsSubmitting(false);
@@ -345,7 +384,7 @@ export default function PermissionFormPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setExtendableLeave(null)}>Buat Izin Baru</AlertDialogCancel>
-                <AlertDialogAction onClick={() => router.push(`/dashboard/parent?extend=${extendableLeave?.id}&student=${student.id}`)}>
+                <AlertDialogAction onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${extendableLeave?.id}`)}>
                     Ya, Perpanjang Izin
                 </AlertDialogAction>
             </AlertDialogFooter>
@@ -362,16 +401,21 @@ export default function PermissionFormPage() {
                   <span className="sr-only">Kembali</span>
                 </Button>
             </Link>
-            <h1 className="text-lg font-semibold text-gray-900">Formulir Perizinan Siswa</h1>
+            <h1 className="text-lg font-semibold text-gray-900">
+                {isExtensionMode ? 'Formulir Perpanjangan Izin' : 'Formulir Perizinan Siswa'}
+            </h1>
           </div>
         </div>
       </header>
       <main className="flex flex-1 w-full items-start justify-center bg-muted/20 p-4 md:p-8">
         <Card className="w-full max-w-3xl shadow-lg rounded-xl mt-0">
           <CardHeader>
-            <CardTitle className="text-2xl">Detail Pengajuan Izin</CardTitle>
+            <CardTitle className="text-2xl">{isExtensionMode ? 'Detail Perpanjangan Izin' : 'Detail Pengajuan Izin'}</CardTitle>
             <CardDescription>
-              Lengkapi formulir di bawah ini untuk mengajukan izin reguler.
+                {isExtensionMode 
+                    ? `Perpanjang izin untuk ${student.full_name}. Jenis izin tidak dapat diubah.`
+                    : 'Lengkapi formulir di bawah ini untuk mengajukan izin reguler.'
+                }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -417,18 +461,19 @@ export default function PermissionFormPage() {
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                           className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-6"
+                          disabled={isExtensionMode}
                         >
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="Sakit" />
+                              <RadioGroupItem value="Sakit" disabled={isExtensionMode} />
                             </FormControl>
-                            <FormLabel className="font-normal">Sakit</FormLabel>
+                            <FormLabel className={cn("font-normal", isExtensionMode && "text-muted-foreground")}>Sakit</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="Izin" />
+                              <RadioGroupItem value="Izin" disabled={isExtensionMode} />
                             </FormControl>
-                            <FormLabel className="font-normal">Izin</FormLabel>
+                            <FormLabel className={cn("font-normal", isExtensionMode && "text-muted-foreground")}>Izin</FormLabel>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
@@ -442,7 +487,7 @@ export default function PermissionFormPage() {
                   name="duration"
                   render={({ field }) => (
                     <FormItem className="space-y-3">
-                      <FormLabel>Durasi Izin</FormLabel>
+                      <FormLabel>{isExtensionMode ? 'Perpanjang Selama' : 'Durasi Izin'}</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -473,6 +518,15 @@ export default function PermissionFormPage() {
                     </FormItem>
                   )}
                 />
+                
+                {isExtensionMode && originalLeave && (
+                    <Card className="bg-amber-50 border-amber-200">
+                        <CardContent className="p-3 text-sm text-amber-900">
+                            <p>Izin sebelumnya ({originalLeave.leave_type}) berlaku hingga <strong>{format(parseISO(originalLeave.end_date), "EEEE, d MMMM yyyy", { locale: id })}</strong>.</p>
+                            <p>Perpanjangan akan dimulai dari tanggal setelahnya.</p>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
@@ -481,14 +535,15 @@ export default function PermissionFormPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Tanggal Mulai</FormLabel>
-                        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                          <PopoverTrigger asChild>
+                        <Popover open={isPopoverOpen} onOpenChange={isExtensionMode ? undefined : setIsPopoverOpen}>
+                          <PopoverTrigger asChild disabled={isExtensionMode}>
                             <FormControl>
                               <Button
                                 variant={"outline"}
                                 className={cn(
                                   "w-full justify-start text-left font-normal",
-                                  !field.value && "text-muted-foreground"
+                                  !field.value && "text-muted-foreground",
+                                  isExtensionMode && "pointer-events-none bg-muted/50"
                                 )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -524,7 +579,7 @@ export default function PermissionFormPage() {
                            <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal pointer-events-none bg-background"
+                              "w-full justify-start text-left font-normal pointer-events-none bg-muted/50"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -546,10 +601,10 @@ export default function PermissionFormPage() {
                   name="reasonText"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Alasan/Keterangan (Opsional)</FormLabel>
+                      <FormLabel>{isExtensionMode ? 'Alasan Perpanjangan (Opsional)' : 'Alasan/Keterangan (Opsional)'}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Contoh: Ada acara keluarga di luar kota."
+                          placeholder={isExtensionMode ? "Contoh: Sesuai anjuran dokter, perlu istirahat tambahan." : "Contoh: Ada acara keluarga di luar kota."}
                           {...field}
                         />
                       </FormControl>
@@ -584,7 +639,14 @@ export default function PermissionFormPage() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Mengirim...
                        </>
-                   ) : 'Kirim Pemberitahuan'}
+                   ) : (
+                      isExtensionMode ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4"/>
+                          Kirim Perpanjangan
+                        </>
+                      ) : 'Kirim Pemberitahuan'
+                   )}
                 </Button>
               </form>
             </Form>
