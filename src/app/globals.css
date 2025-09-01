@@ -35,7 +35,7 @@
     --input: 0 0% 89%;
     --ring: 140 60% 25%;
 
-    --radius: 0.25rem;
+    --radius: 0.60rem;
 
     /* Custom SPMB Colors */
     --hero-bg: linear-gradient(hsla(140, 60%, 25%, 0.08) 0%, hsla(140, 60%, 25%, 0.56) 50%, hsla(140, 60%, 25%, 0.8) 100%);
