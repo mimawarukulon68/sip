@@ -540,8 +540,8 @@ export default function ParentDashboardPage() {
                     )}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
+            <CardContent className="p-4 pt-0 flex gap-2">
+                <div className="w-2/5">
                     <Label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</Label>
                     <Select onValueChange={handleYearChange} value={selectedAcademicYear || ''}>
                         <SelectTrigger id="academic-year">
@@ -554,7 +554,7 @@ export default function ParentDashboardPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div>
+                <div className="w-3/5">
                      <Label htmlFor="academic-period" className="text-sm font-medium mb-2 block">Periode</Label>
                     <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
                         <SelectTrigger id="academic-period">
@@ -682,13 +682,15 @@ export default function ParentDashboardPage() {
                             <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                                 {fullLeaveChain.map((request, index) => {
                                     const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                    const isFirst = index === 0;
+                                    const isSakit = request.leave_type === 'Sakit';
                                     return (
                                     <div key={request.id} className="flex items-start gap-3">
                                         <div className="w-5 pt-0.5">
-                                            {index > 0 ? (
-                                                <RefreshCw className="h-4 w-4 text-amber-600" />
-                                            ) : (
+                                            {isFirst ? (
                                                 <FileSignature className="h-4 w-4 text-gray-600" />
+                                            ) : (
+                                                <RefreshCw className="h-4 w-4 text-amber-600" />
                                             )}
                                         </div>
                                         <div className="flex-1">
@@ -793,7 +795,9 @@ export default function ParentDashboardPage() {
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
                         <AlertTriangle className="h-6 w-6 text-red-600" />
                     </div>
-                    <AlertDialogTitle className="text-lg">Hapus Pengajuan Izin?</AlertDialogTitle>
+                    <AlertDialogTitle className="text-lg">
+                        {leaveToDelete?.isExtension ? 'Batalkan Perpanjangan?' : 'Hapus Pengajuan Izin?'}
+                    </AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
                        {leaveToDelete?.isExtension
                             ? "Aksi ini akan menghapus data perpanjangan terakhir. Izin sebelumnya tidak akan terpengaruh. Tindakan ini tidak dapat diurungkan."
@@ -807,7 +811,7 @@ export default function ParentDashboardPage() {
                     </AlertDialogCancel>
                     <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                          {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                         {leaveToDelete?.isExtension ? 'Ya, Hapus Perpanjangan' : 'Ya, Hapus Izin'}
+                         {leaveToDelete?.isExtension ? 'Ya, Batalkan Perpanjangan' : 'Ya, Hapus Izin'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -933,3 +937,4 @@ export default function ParentDashboardPage() {
     
 
     
+
