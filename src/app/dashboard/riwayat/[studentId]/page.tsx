@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { 
   History, 
   Search, 
   Filter, 
@@ -22,6 +32,9 @@ import {
   RefreshCw,
   Link2,
   ExternalLink,
+  User,
+  CalendarDays,
+  ListRestart
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -39,6 +52,9 @@ type LeaveRequest = {
     status: 'AKTIF' | 'SELESAI';
     parent_leave_id: string | null;
     document_url: string | null;
+    parent_profiles: {
+        full_name: string;
+    } | null;
 };
 
 type Student = {
@@ -89,7 +105,12 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
 
         const requestsPromise = supabase
             .from('leave_requests')
-            .select('*')
+            .select(`
+                *,
+                parent_profiles (
+                    full_name
+                )
+            `)
             .eq('student_id', studentId)
             .order('start_date', { ascending: true });
 
@@ -371,7 +392,8 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                 const allInChain = [chain.root, ...chain.extensions];
 
                 return (
-                    <Card key={chain.root.id} className="overflow-hidden">
+                  <Dialog key={chain.root.id}>
+                    <Card className="overflow-hidden">
                         <CardHeader className="p-4 bg-slate-50/70 border-b">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -435,21 +457,84 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                             </div>
                         </CardContent>
                         <CardFooter className="p-4 border-t bg-slate-50/70">
-                            <Button variant="outline" size="sm" className="w-full" asChild={chain.document_url ? true : false} disabled={!chain.document_url}>
-                                {chain.document_url ? (
-                                    <a href={chain.document_url} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="mr-2 h-4 w-4"/>
-                                        Lihat Dokumen Pendukung
-                                    </a>
-                                ) : (
-                                    <>
-                                        <ExternalLink className="mr-2 h-4 w-4"/>
-                                        Tidak Ada Dokumen
-                                    </>
-                                )}
-                            </Button>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full">
+                                    Lihat Detail
+                                </Button>
+                            </DialogTrigger>
                         </CardFooter>
                     </Card>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                Detail Izin: {chain.root.leave_type}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {student.full_name} - {student.classes?.class_name}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4 text-sm">
+                            <div className="grid grid-cols-3 items-center gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4"/>Status</div>
+                               <div className="col-span-2 font-medium">
+                                   <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        "capitalize",
+                                        chain.final_status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                    )}
+                                >
+                                    {chain.final_status.toLowerCase()}
+                                </Badge>
+                               </div>
+                            </div>
+                             <div className="grid grid-cols-3 items-center gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Periode</div>
+                               <div className="col-span-2 font-medium">{format(parseISO(chain.root.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })} ({chain.total_duration} hari)</div>
+                            </div>
+                            <div className="grid grid-cols-3 items-center gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
+                               <div className="col-span-2 font-medium">{chain.root.parent_profiles?.full_name || 'N/A'}</div>
+                            </div>
+                             <div className="grid grid-cols-3 items-start gap-4 pt-4 border-t">
+                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><ListRestart className="h-4 w-4"/>Kronologi</div>
+                                <div className="col-span-2 space-y-2">
+                                     {allInChain.map((request, index) => (
+                                        <div key={request.id} className={cn("flex items-start gap-2 text-xs p-2 rounded-md", index === 0 ? 'bg-slate-50' : 'bg-amber-50')}>
+                                            <div className="w-5 pt-0.5 flex-shrink-0">
+                                                {index === 0 ? (
+                                                    isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
+                                                ) : (
+                                                    <RefreshCw className="h-4 w-4 text-amber-600"/>
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-semibold">{index === 0 ? 'Izin Awal' : `Perpanjangan ${index}`}</p>
+                                                <p className="italic text-muted-foreground">"{request.reason || "Tidak ada alasan"}"</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter className="sm:justify-between gap-2">
+                             <DialogClose asChild>
+                                <Button type="button" variant="secondary">
+                                    Tutup
+                                </Button>
+                            </DialogClose>
+                            <Button
+                                asChild
+                                disabled={!chain.document_url}
+                            >
+                                <a href={chain.document_url || '#'} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="mr-2 h-4 w-4"/>
+                                    Lihat Dokumen Pendukung
+                                </a>
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 )
               })}
             </div>
@@ -459,5 +544,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
-    
