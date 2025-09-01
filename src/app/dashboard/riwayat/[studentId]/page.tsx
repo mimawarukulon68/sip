@@ -1,10 +1,9 @@
-
 "use client";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,10 +17,10 @@ import {
   ArrowLeft,
   BookUser,
   Archive,
-  Info,
   Clock,
   FileText,
   RefreshCw,
+  Link2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -200,23 +199,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const totalPermitDays = permitRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
   const totalValidDays = totalSickDays + totalPermitDays;
 
-  const getLeaveTypeBadge = (type: string) => {
-    const isSakit = type.toLowerCase() === 'sakit';
-    return (
-      <Badge
-        className={cn(
-          'w-full justify-center text-base py-2 font-semibold',
-          isSakit
-            ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100'
-            : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100'
-        )}
-        variant="outline"
-      >
-        {type}
-      </Badge>
-    );
-  };
-
   return (
     <div className="min-h-screen w-full flex-col bg-muted/10">
       <header className="bg-white shadow-sm border-b sticky top-0 z-20">
@@ -373,42 +355,74 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredChains.map((chain) => (
-                <Card key={chain.root.id}>
-                    <CardHeader className="p-4 pb-0">
-                        {getLeaveTypeBadge(chain.root.leave_type)}
-                    </CardHeader>
-                    <CardContent className="p-4 text-center">
-                        <p className="font-semibold text-lg text-gray-800">
-                             {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
-                             <span className="text-base text-gray-600 font-normal"> ({chain.total_duration} hari)</span>
-                        </p>
-                         <div className="mt-4 text-left bg-gray-50 rounded-lg p-3 space-y-2 text-sm text-gray-700 border">
-                             {[chain.root, ...chain.extensions].map((request, index) => {
-                                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                                 const isSakit = request.leave_type.toLowerCase() === 'sakit';
-                                 return (
-                                    <div key={request.id} className="flex items-start gap-3">
-                                        <div className="w-5 pt-0.5">
-                                            {index > 0 ? (
-                                                <RefreshCw className="h-4 w-4 text-yellow-600"/>
-                                            ) : (
-                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
-                                            )}
+              {filteredChains.map((chain) => {
+                const isExtended = chain.extensions.length > 0;
+                const isSakit = chain.root.leave_type === 'Sakit';
+                const allInChain = [chain.root, ...chain.extensions];
+
+                return (
+                    <Card key={chain.root.id} className="overflow-hidden">
+                        <CardHeader className="p-4 bg-slate-50/70 border-b">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="flex items-center gap-3 text-lg">
+                                        <span>{chain.root.leave_type}</span>
+                                        {isExtended && (
+                                            <Badge variant="secondary" className="bg-amber-100 text-amber-800 border border-amber-200">
+                                                <Link2 className="h-3 w-3 mr-1.5" />
+                                                Diperpanjang
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
+                                        <span className="ml-2">({chain.total_duration} hari)</span>
+                                    </p>
+                                </div>
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        chain.final_status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                    )}
+                                >
+                                    <Clock className={cn("h-3 w-3 mr-1.5", chain.final_status === 'SELESAI' && 'hidden')} />
+                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", chain.final_status === 'AKTIF' && 'hidden')} />
+                                    {chain.final_status}
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-4 text-sm">
+                            <div className="space-y-1">
+                                {allInChain.map((request, index) => {
+                                    const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                    const isFirst = index === 0;
+
+                                    return (
+                                        <div key={request.id} className={cn("flex items-start gap-4 p-3 rounded-lg", isFirst ? '' : 'pt-3 ')}>
+                                             <div className="w-5 pt-0.5 flex-shrink-0">
+                                                {isFirst ? (
+                                                    isSakit ? <Thermometer className="h-5 w-5 text-red-500"/> : <ClipboardList className="h-5 w-5 text-blue-500"/>
+                                                ) : (
+                                                    <RefreshCw className="h-5 w-5 text-amber-500"/>
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="italic">
+                                                    "{request.reason || (isFirst ? "Tidak ada alasan" : "Alasan tidak disebutkan")}"
+                                                </p>
+                                                 <p className="text-xs text-muted-foreground mt-1">
+                                                    {format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}
+                                                </p>
+                                            </div>
+                                            <Badge variant="outline" className="font-normal">{duration} hari</Badge>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="italic">
-                                                "{request.reason || "Tidak ada alasan"}"
-                                            </p>
-                                        </div>
-                                        <Badge variant="outline" className="font-normal">{duration} hari</Badge>
-                                    </div>
-                                 )
-                             })}
-                        </div>
-                    </CardContent>
-                </Card>
-              ))}
+                                    )
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+              })}
             </div>
           )}
         </div>
