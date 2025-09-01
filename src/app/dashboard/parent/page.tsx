@@ -645,7 +645,7 @@ export default function ParentDashboardPage() {
                     {finalActiveLeave && combinedStartDate && !isExtended && (
                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                         {isSingleDayLeave ? (
-                          <>
+                           <>
                             <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
                                 <span className="font-normal"> ({totalDuration} hari)</span>
@@ -671,7 +671,7 @@ export default function ParentDashboardPage() {
                       </div>
                     )}
                     {finalActiveLeave && combinedStartDate && isExtended && (
-                         <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                        <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                             <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
                                 <span className="font-normal"> ({totalDuration} hari)</span>
@@ -682,11 +682,14 @@ export default function ParentDashboardPage() {
                             <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                                 {fullLeaveChain.map((request, index) => {
                                     const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                                    const isSakit = request.leave_type.toLowerCase() === 'sakit';
                                     return (
                                     <div key={request.id} className="flex items-start gap-3">
                                         <div className="w-5 pt-0.5">
-                                             <FileSignature className="h-4 w-4 text-gray-600" />
+                                            {index > 0 ? (
+                                                <RefreshCw className="h-4 w-4 text-amber-600" />
+                                            ) : (
+                                                <FileSignature className="h-4 w-4 text-gray-600" />
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
