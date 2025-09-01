@@ -78,7 +78,6 @@ type LeaveRequestChain = {
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = params;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [parentProfiles, setParentProfiles] = useState<Map<string, string>>(new Map());
@@ -89,6 +88,8 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const [filterType, setFilterType] = useState("all");
   
   useEffect(() => {
+    const { studentId } = params;
+
     async function fetchData() {
         if (!studentId) {
             setLoading(false);
@@ -143,7 +144,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     }
 
     fetchData();
-  }, [studentId]);
+  }, [params]);
 
 
   const leaveRequestChains = leaveRequests
