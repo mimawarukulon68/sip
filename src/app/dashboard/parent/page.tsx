@@ -75,11 +75,12 @@ type LeaveRequest = {
     start_date: string;
     end_date: string;
     reason: string | null;
-    status: 'AKTIF' | 'SELESAI'; // Removed 'DIBATALKAN'
+    status: 'AKTIF' | 'SELESAI';
     document_url: string | null;
     students: {
         full_name: string;
     } | null;
+    parent_leave_id: string | null;
 };
 
 
@@ -138,9 +139,9 @@ export default function ParentDashboardPage() {
   
   const newEndDate = React.useMemo(() => {
     if (!leaveToExtend || !watchDuration) return null;
-    const currentEndDate = parseISO(leaveToExtend.end_date);
+    const newStartDate = addDays(parseISO(leaveToExtend.end_date), 1);
     const extensionDays = parseInt(watchDuration, 10);
-    return addDays(currentEndDate, extensionDays);
+    return addDays(newStartDate, extensionDays - 1);
   }, [leaveToExtend, watchDuration]);
 
 
@@ -156,7 +157,7 @@ export default function ParentDashboardPage() {
   }, [allAcademicPeriods, selectedAcademicYear]);
 
 
-  const fetchProfileAndData = React.useCallback(async (params?: { autoExtendLeaveId?: string; autoExtendStudentId?: string }) => {
+  const fetchProfileAndData = React.useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -219,7 +220,7 @@ export default function ParentDashboardPage() {
                 id,
                 full_name,
                 classes ( class_name ),
-                leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )
+                leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ), parent_leave_id )
             `)
             .in('id', studentIds);
         
@@ -248,43 +249,23 @@ export default function ParentDashboardPage() {
                 await Promise.all(updatePromises);
                 const { data: refreshedStudentData, error: refreshedError } = await supabase
                     .from('students')
-                    .select(`id, full_name, classes ( class_name ), leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ) )`)
+                    .select(`id, full_name, classes ( class_name ), leave_requests ( id, leave_type, start_date, end_date, reason, status, document_url, students ( full_name ), parent_leave_id )`)
                     .in('id', studentIds);
                 
                 if (refreshedError) console.error("Error refetching student data:", refreshedError);
                 setStudents((refreshedStudentData as StudentData[]) || []);
-                 if (params?.autoExtendLeaveId && params?.autoExtendStudentId) {
-                    const studentToExtend = refreshedStudentData?.find(s => s.id === params.autoExtendStudentId);
-                    const leaveToExtend = studentToExtend?.leave_requests.find(lr => lr.id === params.autoExtendLeaveId);
-                    if (leaveToExtend) setLeaveToExtend(leaveToExtend);
-                }
             } else {
                 setStudents(studentData as StudentData[]);
-                 if (params?.autoExtendLeaveId && params?.autoExtendStudentId) {
-                    const studentToExtend = studentData.find(s => s.id === params.autoExtendStudentId);
-                    const leaveToExtend = studentToExtend?.leave_requests.find(lr => lr.id === params.autoExtendLeaveId);
-                    if (leaveToExtend) setLeaveToExtend(leaveToExtend);
-                }
             }
         }
     }
     
     setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
 
   React.useEffect(() => {
-    const autoExtendLeaveId = searchParams.get('extend');
-    const autoExtendStudentId = searchParams.get('student');
-    
-    if (autoExtendLeaveId && autoExtendStudentId) {
-        // Clear search params
-        router.replace('/dashboard/parent', {scroll: false});
-        fetchProfileAndData({ autoExtendLeaveId, autoExtendStudentId });
-    } else {
-        fetchProfileAndData();
-    }
+    fetchProfileAndData();
   }, [fetchProfileAndData, searchParams, router]);
 
   const handleLogout = async () => {
@@ -372,41 +353,58 @@ export default function ParentDashboardPage() {
   };
 
   const handleExtendSubmit = async (values: z.infer<typeof extendFormSchema>) => {
-      if (!leaveToExtend || !newEndDate) return;
-      setIsExtending(true);
+    if (!leaveToExtend || !newEndDate) return;
+    setIsExtending(true);
 
-      try {
-          const newReason = `(Perpanjangan: ${values.reason || 'Tidak ada alasan tambahan'})`;
-          const updatedReason = leaveToExtend.reason ? `${leaveToExtend.reason}\n${newReason}` : newReason;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "Anda harus login untuk melakukan aksi ini." });
+        setIsExtending(false);
+        return;
+    }
+    
+    // Find the student this leave belongs to
+    const student = students.find(s => s.leave_requests.some(lr => lr.id === leaveToExtend.id));
+    if (!student) {
+         toast({ variant: "destructive", title: "Error", description: "Siswa tidak ditemukan." });
+         setIsExtending(false);
+         return;
+    }
 
-          const { error } = await supabase
-              .from('leave_requests')
-              .update({ 
-                  end_date: format(newEndDate, 'yyyy-MM-dd'),
-                  reason: updatedReason,
-                  status: 'AKTIF' // ensure status is active
-              })
-              .eq('id', leaveToExtend.id);
-          
-          if (error) throw error;
+    try {
+        const newStartDate = addDays(parseISO(leaveToExtend.end_date), 1);
+        
+        const { error } = await supabase.from('leave_requests').insert({
+            created_by_user_id: user.id,
+            student_id: student.id,
+            leave_type: leaveToExtend.leave_type,
+            start_date: format(newStartDate, 'yyyy-MM-dd'),
+            end_date: format(newEndDate, 'yyyy-MM-dd'),
+            reason: values.reason || null,
+            status: 'AKTIF',
+            parent_leave_id: leaveToExtend.id,
+        });
+        
+        if (error) throw error;
 
-          toast({
-              title: "Izin Diperpanjang",
-              description: `Izin untuk ${leaveToExtend.students?.full_name} berhasil diperpanjang.`,
-          });
-          
-          setLeaveToExtend(null);
-          await fetchProfileAndData();
+        toast({
+            title: "Izin Berhasil Diperpanjang",
+            description: `Izin untuk ${student.full_name} telah diperpanjang.`,
+        });
+        
+        setLeaveToExtend(null);
+        form.reset();
+        await fetchProfileAndData();
 
-      } catch (error: any) {
-          toast({
-              variant: "destructive",
-              title: "Gagal Memperpanjang Izin",
-              description: error.message || "Terjadi kesalahan pada server.",
-          });
-      } finally {
-          setIsExtending(false);
-      }
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Gagal Memperpanjang Izin",
+            description: error.message || "Terjadi kesalahan pada server.",
+        });
+    } finally {
+        setIsExtending(false);
+    }
   };
   
   const handleYearChange = (year: string) => {
@@ -414,6 +412,20 @@ export default function ParentDashboardPage() {
     const firstPeriod = allAcademicPeriods.find(p => p.academic_year === year);
     if(firstPeriod) setSelectedPeriodId(firstPeriod.id);
   }
+
+  const findLastLeaveInChain = (leave: LeaveRequest, allStudentRequests: LeaveRequest[]): LeaveRequest => {
+      let currentLeave = leave;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+          const nextLeave = allStudentRequests.find(lr => lr.parent_leave_id === currentLeave.id);
+          if (nextLeave) {
+              currentLeave = nextLeave;
+          } else {
+              break;
+          }
+      }
+      return currentLeave;
+  };
 
   if (loading && !leaveToExtend) {
     return (
@@ -560,8 +572,34 @@ export default function ParentDashboardPage() {
         </Card>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
-              const activeLeave = student.leave_requests.find(lr => lr.status === 'AKTIF');
-              const badgeInfo = getBadgeInfo(activeLeave);
+              const activeLeaves = student.leave_requests.filter(lr => lr.status === 'AKTIF');
+              const activeLeaveRoots = activeLeaves.filter(lr => !lr.parent_leave_id);
+
+              let finalActiveLeave: LeaveRequest | undefined = undefined;
+              let fullLeaveChain: LeaveRequest[] = [];
+              let combinedStartDate: string | undefined;
+              
+              if(activeLeaveRoots.length > 0) {
+                  const root = activeLeaveRoots[0]; // assume only one active chain
+                  const lastLeaveInChain = findLastLeaveInChain(root, student.leave_requests);
+                  finalActiveLeave = lastLeaveInChain;
+                  
+                  let current = lastLeaveInChain;
+                  fullLeaveChain.unshift(current);
+                  while(current.parent_leave_id){
+                      const parent = student.leave_requests.find(lr => lr.id === current.parent_leave_id);
+                      if(parent){
+                          fullLeaveChain.unshift(parent);
+                          current = parent;
+                      } else {
+                          break;
+                      }
+                  }
+                  combinedStartDate = fullLeaveChain[0].start_date;
+              }
+
+
+              const badgeInfo = getBadgeInfo(finalActiveLeave);
               
               const selectedPeriod = allAcademicPeriods.find(p => p.id === selectedPeriodId);
               
@@ -579,8 +617,9 @@ export default function ParentDashboardPage() {
               const totalSakitDays = sakitAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
               const totalIzinDays = izinAttendance.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
               const totalValidDays = totalSakitDays + totalIzinDays;
-
-              const isSingleDayLeave = activeLeave ? differenceInCalendarDays(parseISO(activeLeave.end_date), parseISO(activeLeave.start_date)) < 1 : false;
+              
+              const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
+              const isSingleDayLeave = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) < 1 : false;
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
@@ -600,15 +639,15 @@ export default function ParentDashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
-                  {activeLeave && (
+                  {finalActiveLeave && combinedStartDate && (
                      <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                         <p className="font-semibold text-slate-800">
-                           {format(parseISO(activeLeave.start_date), "d MMMM", { locale: id })} - {format(parseISO(activeLeave.end_date), "d MMMM yyyy", { locale: id })} 
-                           <span className="font-normal"> ({differenceInCalendarDays(parseISO(activeLeave.end_date), parseISO(activeLeave.start_date)) + 1} hari)</span>
+                           {format(parseISO(combinedStartDate), "d MMMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMMM yyyy", { locale: id })} 
+                           <span className="font-normal"> ({differenceInCalendarDays(parseISO(finalActiveLeave.end_date), parseISO(combinedStartDate)) + 1} hari)</span>
                         </p>
-                        {activeLeave.reason && (
+                        {finalActiveLeave.reason && (
                             <p className="mt-1 italic">
-                                "{activeLeave.reason}"
+                                "{finalActiveLeave.reason}"
                             </p>
                         )}
                      </div>
@@ -652,19 +691,19 @@ export default function ParentDashboardPage() {
               </CardContent>
               <CardFooter className="flex flex-col items-stretch gap-2 bg-slate-50 p-4 border-t">
                  <div className="flex gap-2 flex-wrap">
-                    {activeLeave ? (
+                    {finalActiveLeave ? (
                      <>
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setLeaveToExtend(activeLeave)}>
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setLeaveToExtend(finalActiveLeave)}>
                             <RefreshCw className="mr-2 h-4 w-4" />
                             Perpanjang
                         </Button>
                         {!isSingleDayLeave && (
-                            <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(activeLeave)}>
+                            <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
                                 <Check className="mr-2 h-4 w-4" />
                                 Sudah Masuk
                             </Button>
                         )}
-                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete(activeLeave)}>
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete(finalActiveLeave)}>
                             <X className="mr-2 h-4 w-4" />
                             Batalkan
                         </Button>
@@ -740,12 +779,12 @@ export default function ParentDashboardPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Sheet open={!!leaveToExtend} onOpenChange={(open) => { if (!open) setLeaveToExtend(null); }}>
+        <Sheet open={!!leaveToExtend} onOpenChange={(open) => { if (!open) {setLeaveToExtend(null); form.reset();} }}>
             <SheetContent className="flex flex-col">
                  <SheetHeader>
                     <SheetTitle>Perpanjang Izin</SheetTitle>
                     <SheetDescription>
-                        Perpanjang izin untuk <strong>{leaveToExtend?.students?.full_name}</strong>. Pilih durasi perpanjangan dan berikan keterangan jika perlu.
+                        Perpanjang izin untuk <strong>{students.find(s => s.leave_requests.some(lr => lr.id === leaveToExtend?.id))?.full_name}</strong>. Pilih durasi perpanjangan dan berikan keterangan jika perlu.
                     </SheetDescription>
                 </SheetHeader>
                 
