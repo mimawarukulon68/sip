@@ -78,6 +78,7 @@ type LeaveRequestChain = {
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
+  const { studentId } = params;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [parentProfiles, setParentProfiles] = useState<Map<string, string>>(new Map());
@@ -88,14 +89,13 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const [filterType, setFilterType] = useState("all");
   
   useEffect(() => {
-    const { studentId } = params;
-
     async function fetchData() {
         if (!studentId) {
             setLoading(false);
             return;
         }
 
+        setLoading(true);
         const studentPromise = supabase
             .from('students')
             .select(`
@@ -144,7 +144,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     }
 
     fetchData();
-  }, [params]);
+  }, [studentId]);
 
 
   const leaveRequestChains = leaveRequests
