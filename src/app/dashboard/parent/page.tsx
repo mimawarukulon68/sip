@@ -619,8 +619,8 @@ export default function ParentDashboardPage() {
               const totalValidDays = totalSakitDays + totalIzinDays;
               
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
-              const isSingleDayLeave = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) < 1 : false;
-
+              const isSingleDayLeave = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) === 0 : false;
+              const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-4 border-b p-4">
@@ -639,14 +639,36 @@ export default function ParentDashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
-                  {finalActiveLeave && combinedStartDate && (
-                     <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
-                        <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                           {format(parseISO(combinedStartDate), "EEEE, d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE, d MMM yyyy", { locale: id })}
-                           <span className="font-normal"> ({differenceInCalendarDays(parseISO(finalActiveLeave.end_date), parseISO(combinedStartDate)) + 1} hari)</span>
-                        </div>
-                        {isExtended ? (
-                          <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
+                    {finalActiveLeave && combinedStartDate && !isExtended && (
+                      <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                        {isSingleDayLeave ? (
+                          <>
+                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
+                                {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
+                                <span className="font-normal"> ({totalDuration} hari)</span>
+                            </div>
+                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                               {format(parseISO(combinedStartDate), "dd MMM yyyy", { locale: id })}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
+                                {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
+                                <span className="font-normal"> ({totalDuration} hari)</span>
+                            </div>
+                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                               {format(parseISO(combinedStartDate), "dd MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
+                            </div>
+                          </>
+                        )}
+                        <p className="mt-1 italic">
+                            "{finalActiveLeave.reason || 'Tidak ada alasan'}"
+                        </p>
+                      </div>
+                    )}
+                    {finalActiveLeave && isExtended && (
+                        <div className="mt-3 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                              {fullLeaveChain.map((request, index) => {
                                  const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
                                  const isSakit = request.leave_type.toLowerCase() === 'sakit';
@@ -656,10 +678,11 @@ export default function ParentDashboardPage() {
                                             {index > 0 ? (
                                                 <RefreshCw className="h-4 w-4 text-yellow-600"/>
                                             ) : (
-                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
+                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <FileText className="h-4 w-4 text-blue-600"/>
                                             )}
                                         </div>
                                         <div className="flex-1">
+                                            <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
                                             <p className="italic">
                                                 "{request.reason || "Tidak ada alasan"}"
                                             </p>
@@ -669,15 +692,7 @@ export default function ParentDashboardPage() {
                                  )
                              })}
                           </div>
-                        ) : (
-                           finalActiveLeave.reason && (
-                            <p className="mt-1 italic">
-                                "{finalActiveLeave.reason}"
-                            </p>
-                           )
-                        )}
-                     </div>
-                  )}
+                    )}
                 </div>
               <CardContent className="space-y-4 flex-grow pt-4 pb-4 p-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
@@ -898,11 +913,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
-
-    
