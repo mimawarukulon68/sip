@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { addDays, format, subDays, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
-import { Calendar as CalendarIcon, Upload, ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { Calendar as CalendarIcon, Upload, ArrowLeft, Loader2, RefreshCw, FileText, X } from "lucide-react";
 import { format as formatDate } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,7 @@ export default function PermissionFormPage() {
   const [isExtensionMode, setIsExtensionMode] = React.useState(false);
   const [originalLeave, setOriginalLeave] = React.useState<LeaveRequest | null>(null);
   const [extendableLeave, setExtendableLeave] = React.useState<LeaveRequest | null>(null);
+  const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -237,6 +238,23 @@ export default function PermissionFormPage() {
     setIsPopoverOpen(false); 
   }
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      const allFiles = [...uploadedFiles, ...newFiles];
+      setUploadedFiles(allFiles);
+      form.setValue("document", allFiles); // Update form value
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = [...uploadedFiles];
+    newFiles.splice(index, 1);
+    setUploadedFiles(newFiles);
+    form.setValue("document", newFiles); // Update form value
+  };
+
   const whatsappMessage = React.useMemo(() => {
     const values = form.getValues();
     if (!values.studentName || !values.reasonType || !values.startDate || !values.endDate) {
@@ -369,8 +387,6 @@ export default function PermissionFormPage() {
       </div>
     );
   }
-
-  const documentRef = form.register("document");
 
   return (
     <>
@@ -616,22 +632,65 @@ export default function PermissionFormPage() {
                 <FormField
                   control={form.control}
                   name="document"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
-                      <FormLabel>Unggah Dokumen Pendukung (Opsional)</FormLabel>
-                      <FormDescription>
-                        Contoh: Surat keterangan dokter.
-                      </FormDescription>
-                      <FormControl>
-                          <div className="relative">
-                            <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input type="file" {...documentRef} className="pl-10"/>
+                      <FormLabel>Dokumen Pendukung (Opsional)</FormLabel>
+                       <div className="mt-2">
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                            <input
+                              type="file"
+                              id="documents"
+                              multiple
+                              accept="image/*,.pdf"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
+                            <label htmlFor="documents" className="cursor-pointer">
+                              <Upload className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-gray-400" />
+                              <p className="text-xs sm:text-sm text-gray-600">
+                                Klik untuk mengunggah foto atau dokumen
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Format: JPG, PNG, PDF (Maks. 5MB)
+                              </p>
+                            </label>
                           </div>
-                      </FormControl>
+
+                          {uploadedFiles.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {uploadedFiles.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-gray-50 p-2 rounded text-xs sm:text-sm"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-gray-700 truncate">
+                                      {file.name}
+                                    </span>
+                                    <span className="text-gray-500 flex-shrink-0">
+                                      ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFile(index)}
+                                    className="flex-shrink-0 h-6 w-6 p-0"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
 
                 <Button type="submit" className="w-full text-base font-semibold py-6" disabled={isSubmitting}>
                    {isSubmitting ? (
@@ -667,3 +726,6 @@ export default function PermissionFormPage() {
   );
 }
 
+
+
+    
