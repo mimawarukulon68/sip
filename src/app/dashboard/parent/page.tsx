@@ -50,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -328,6 +328,7 @@ export default function ParentDashboardPage() {
     setIsCompleting(true);
     try {
       const today = new Date();
+      today.setHours(0,0,0,0);
       const { error } = await supabase
         .from('leave_requests')
         .update({ status: 'SELESAI', end_date: format(today, 'yyyy-MM-dd') })
@@ -588,7 +589,7 @@ export default function ParentDashboardPage() {
               
               if(activeLeaveRoots.length > 0) {
                   const root = activeLeaveRoots[0]; // assume only one active chain
-                  const lastLeaveInChain = findLastLeaveInChain(root, periodRequests); // Use periodRequests
+                  const lastLeaveInChain = findLastLeaveInChain(root, periodRequests);
                   finalActiveLeave = lastLeaveInChain;
                   
                   let current = lastLeaveInChain;
@@ -623,6 +624,7 @@ export default function ParentDashboardPage() {
               const isSingleDayLeave = totalDuration === 1;
 
               const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) : false;
+              const canComplete = finalActiveLeave && !isSingleDayLeave ? isAfter(new Date(), parseISO(combinedStartDate)) : false;
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
 
 
@@ -754,7 +756,7 @@ export default function ParentDashboardPage() {
                                 Perpanjang
                             </Button>
                         )}
-                        {!isSingleDayLeave && (
+                        {canComplete && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
                                 <Check className="mr-2 h-4 w-4" />
                                 Sudah Masuk
@@ -938,3 +940,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
