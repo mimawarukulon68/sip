@@ -3,7 +3,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ import {
   FileText,
   RefreshCw,
   Link2,
+  ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -54,6 +55,7 @@ type LeaveRequestChain = {
     total_duration: number;
     final_end_date: string;
     final_status: 'AKTIF' | 'SELESAI';
+    document_url: string | null; // Add document_url to the chain
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
@@ -116,7 +118,8 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             extensions: [],
             total_duration: 0,
             final_end_date: root.end_date,
-            final_status: root.status
+            final_status: root.status,
+            document_url: root.document_url,
         };
 
         let currentLeave = root;
@@ -125,6 +128,9 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             const nextLeave = leaveRequests.find(req => req.parent_leave_id === currentLeave.id);
             if (nextLeave) {
                 chain.extensions.push(nextLeave);
+                if (nextLeave.document_url) { // Check if extension has a doc
+                    chain.document_url = nextLeave.document_url;
+                }
                 currentLeave = nextLeave;
             } else {
                 break;
@@ -135,6 +141,10 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
         chain.total_duration = differenceInCalendarDays(parseISO(allInChain[allInChain.length - 1].end_date), parseISO(chain.root.start_date)) + 1;
         chain.final_end_date = allInChain[allInChain.length - 1].end_date;
         chain.final_status = allInChain[allInChain.length-1].status;
+        
+        // Find any document in the chain
+        chain.document_url = allInChain.find(req => req.document_url)?.document_url || null;
+
         return chain;
     })
     .sort((a,b) => parseISO(b.root.start_date).getTime() - parseISO(a.root.start_date).getTime());
@@ -365,10 +375,10 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                         <CardHeader className="p-4 bg-slate-50/70 border-b">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <CardTitle className="flex items-center gap-3 text-lg">
-                                        <span>{chain.root.leave_type}</span>
+                                    <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+                                        <Badge variant={isSakit ? "destructive" : "secondary"} className="text-white">{chain.root.leave_type}</Badge>
                                         {isExtended && (
-                                            <Badge variant="secondary" className="bg-amber-100 text-amber-800 border border-amber-200">
+                                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                                                 <Link2 className="h-3 w-3 mr-1.5" />
                                                 Diperpanjang
                                             </Badge>
@@ -376,18 +386,19 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
-                                        <span className="ml-2">({chain.total_duration} hari)</span>
+                                        <span className="ml-2 font-medium">({chain.total_duration} hari)</span>
                                     </p>
                                 </div>
                                 <Badge
                                     variant="outline"
                                     className={cn(
+                                        "capitalize",
                                         chain.final_status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
                                     )}
                                 >
                                     <Clock className={cn("h-3 w-3 mr-1.5", chain.final_status === 'SELESAI' && 'hidden')} />
                                     <CheckCircle className={cn("h-3 w-3 mr-1.5", chain.final_status === 'AKTIF' && 'hidden')} />
-                                    {chain.final_status}
+                                    {chain.final_status.toLowerCase()}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -398,7 +409,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                                     const isFirst = index === 0;
 
                                     return (
-                                        <div key={request.id} className={cn("flex items-start gap-4 p-3 rounded-lg", isFirst ? '' : 'pt-3 ')}>
+                                        <div key={request.id} className={cn("flex items-start gap-4 p-3 rounded-lg border-l-4", isFirst ? (isSakit ? 'border-red-200' : 'border-blue-200') : 'border-amber-200' )}>
                                              <div className="w-5 pt-0.5 flex-shrink-0">
                                                 {isFirst ? (
                                                     isSakit ? <Thermometer className="h-5 w-5 text-red-500"/> : <ClipboardList className="h-5 w-5 text-blue-500"/>
@@ -420,6 +431,16 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                                 })}
                             </div>
                         </CardContent>
+                        {chain.document_url && (
+                            <CardFooter className="p-4 border-t bg-slate-50/70">
+                                <a href={chain.document_url} target="_blank" rel="noopener noreferrer" className="w-full">
+                                    <Button variant="outline" size="sm" className="w-full">
+                                        <ExternalLink className="mr-2 h-4 w-4"/>
+                                        Lihat Dokumen Pendukung
+                                    </Button>
+                                </a>
+                            </CardFooter>
+                        )}
                     </Card>
                 )
               })}
