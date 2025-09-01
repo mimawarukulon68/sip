@@ -55,7 +55,7 @@ type LeaveRequestChain = {
     total_duration: number;
     final_end_date: string;
     final_status: 'AKTIF' | 'SELESAI';
-    document_url: string | null; // Add document_url to the chain
+    document_url: string | null;
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
@@ -376,7 +376,10 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                             <div className="flex justify-between items-start">
                                 <div>
                                     <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                                        <Badge variant={isSakit ? "destructive" : "secondary"} className="text-white">{chain.root.leave_type}</Badge>
+                                        <Badge variant={isSakit ? "destructive" : "secondary"} className="text-base">
+                                          {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
+                                          {chain.root.leave_type}
+                                        </Badge>
                                         {isExtended && (
                                             <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                                                 <Link2 className="h-3 w-3 mr-1.5" />
@@ -412,7 +415,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                                         <div key={request.id} className={cn("flex items-start gap-4 p-3 rounded-lg border-l-4", isFirst ? (isSakit ? 'border-red-200' : 'border-blue-200') : 'border-amber-200' )}>
                                              <div className="w-5 pt-0.5 flex-shrink-0">
                                                 {isFirst ? (
-                                                    isSakit ? <Thermometer className="h-5 w-5 text-red-500"/> : <ClipboardList className="h-5 w-5 text-blue-500"/>
+                                                     <p className="text-xs font-semibold text-gray-500 w-full text-center">Awal</p>
                                                 ) : (
                                                     <RefreshCw className="h-5 w-5 text-amber-500"/>
                                                 )}
@@ -431,16 +434,21 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                                 })}
                             </div>
                         </CardContent>
-                        {chain.document_url && (
-                            <CardFooter className="p-4 border-t bg-slate-50/70">
-                                <a href={chain.document_url} target="_blank" rel="noopener noreferrer" className="w-full">
-                                    <Button variant="outline" size="sm" className="w-full">
+                        <CardFooter className="p-4 border-t bg-slate-50/70">
+                            <Button variant="outline" size="sm" className="w-full" asChild={chain.document_url ? true : false} disabled={!chain.document_url}>
+                                {chain.document_url ? (
+                                    <a href={chain.document_url} target="_blank" rel="noopener noreferrer">
                                         <ExternalLink className="mr-2 h-4 w-4"/>
                                         Lihat Dokumen Pendukung
-                                    </Button>
-                                </a>
-                            </CardFooter>
-                        )}
+                                    </a>
+                                ) : (
+                                    <>
+                                        <ExternalLink className="mr-2 h-4 w-4"/>
+                                        Tidak Ada Dokumen
+                                    </>
+                                )}
+                            </Button>
+                        </CardFooter>
                     </Card>
                 )
               })}
@@ -451,3 +459,5 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
+
+    
