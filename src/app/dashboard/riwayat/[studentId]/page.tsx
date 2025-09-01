@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import {
   Info,
   Clock,
   FileText,
-  Link2
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -150,27 +150,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
 
     return matchesSearch && matchesStatus && matchesType;
   });
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'AKTIF':
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100">
-            <Clock className="w-3 h-3 mr-1" />
-            AKTIF
-          </Badge>
-        );
-      case 'SELESAI':
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            SELESAI
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
   
   if (loading) {
      return (
@@ -219,6 +198,23 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const totalSickDays = sickRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
   const totalPermitDays = permitRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
   const totalValidDays = totalSickDays + totalPermitDays;
+
+  const getLeaveTypeBadge = (type: string) => {
+    const isSakit = type.toLowerCase() === 'sakit';
+    return (
+      <Badge
+        className={cn(
+          'w-full justify-center text-base py-2 font-semibold',
+          isSakit
+            ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100'
+            : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100'
+        )}
+        variant="outline"
+      >
+        {type}
+      </Badge>
+    );
+  };
 
   return (
     <div className="min-h-screen w-full flex-col bg-muted/10">
@@ -377,47 +373,39 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
           ) : (
             <div className="space-y-4">
               {filteredChains.map((chain) => (
-                <Card key={chain.root.id} className="flex flex-col">
-                  <CardHeader className="flex-grow flex flex-row items-center justify-between pb-3">
-                    <div>
-                        <CardTitle className="text-base font-semibold flex items-center gap-2">
-                            {chain.root.leave_type}
-                            <span className="text-sm font-normal text-muted-foreground">
-                                ({chain.total_duration} hari)
-                            </span>
-                             {chain.extensions.length > 0 && (
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                    <Link2 className="w-3 h-3"/>
-                                    Diperpanjang
-                                </Badge>
-                            )}
-                        </CardTitle>
-                      <CardDescription className="text-xs">
-                        {format(parseISO(chain.root.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
-                      </CardDescription>
-                    </div>
-                    {getStatusBadge(chain.final_status)}
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="border rounded-lg p-3 text-sm space-y-2 bg-slate-50">
-                        {[chain.root, ...chain.extensions].map((request, index) => {
-                             const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                             return (
-                                <div key={request.id} className={cn("pb-2 pt-2", index > 0 && "border-t")}>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <p className="font-semibold text-xs">
-                                          {index === 0 ? 'Izin Awal' : `Perpanjangan ke-${index}`} ({duration} hari)
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">{format(parseISO(request.start_date), "d MMM", { locale: id })} - {format(parseISO(request.end_date), "d MMM", { locale: id })}</p>
+                <Card key={chain.root.id}>
+                    <CardHeader className="p-4 pb-0">
+                        {getLeaveTypeBadge(chain.root.leave_type)}
+                    </CardHeader>
+                    <CardContent className="p-4 text-center">
+                        <p className="font-semibold text-lg text-gray-800">
+                             {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
+                             <span className="text-base text-gray-600 font-normal"> ({chain.total_duration} hari)</span>
+                        </p>
+                         <div className="mt-4 text-left bg-gray-50 rounded-lg p-3 space-y-2 text-sm text-gray-700">
+                             {[chain.root, ...chain.extensions].map((request, index) => {
+                                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                 const isSakit = request.leave_type.toLowerCase() === 'sakit';
+                                 return (
+                                    <div key={request.id} className="flex items-start gap-3">
+                                        <div className="w-5 pt-0.5">
+                                            {index > 0 ? (
+                                                <RefreshCw className="h-4 w-4 text-yellow-600"/>
+                                            ) : (
+                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="italic">
+                                                "{request.reason || "Tidak ada alasan"}"
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className="font-normal">{duration} hari</Badge>
                                     </div>
-                                    <p className="text-xs text-muted-foreground italic">
-                                        {request.reason ? `"${request.reason}"` : "Tidak ada alasan."}
-                                    </p>
-                                </div>
-                             )
-                        })}
-                    </div>
-                  </CardContent>
+                                 )
+                             })}
+                        </div>
+                    </CardContent>
                 </Card>
               ))}
             </div>
