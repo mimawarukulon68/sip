@@ -642,7 +642,7 @@ export default function ParentDashboardPage() {
                   {finalActiveLeave && combinedStartDate && (
                      <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                         <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                           {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })} 
+                           {format(parseISO(combinedStartDate), "EEEE, d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE, d MMM yyyy", { locale: id })}
                            <span className="font-normal"> ({differenceInCalendarDays(parseISO(finalActiveLeave.end_date), parseISO(combinedStartDate)) + 1} hari)</span>
                         </div>
                         {isExtended ? (
@@ -898,6 +898,8 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
 
     
 
