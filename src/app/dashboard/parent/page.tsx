@@ -588,13 +588,13 @@ export default function ParentDashboardPage() {
               
               if(activeLeaveRoots.length > 0) {
                   const root = activeLeaveRoots[0]; // assume only one active chain
-                  const lastLeaveInChain = findLastLeaveInChain(root, student.leave_requests);
+                  const lastLeaveInChain = findLastLeaveInChain(root, periodRequests); // Use periodRequests
                   finalActiveLeave = lastLeaveInChain;
                   
                   let current = lastLeaveInChain;
                   fullLeaveChain.unshift(current);
                   while(current.parent_leave_id){
-                      const parent = student.leave_requests.find(lr => lr.id === current.parent_leave_id);
+                      const parent = periodRequests.find(lr => lr.id === current.parent_leave_id);
                       if(parent){
                           fullLeaveChain.unshift(parent);
                           current = parent;
@@ -623,6 +623,8 @@ export default function ParentDashboardPage() {
               const isSingleDayLeave = totalDuration === 1;
 
               const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) : false;
+              const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
+
 
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
@@ -645,15 +647,15 @@ export default function ParentDashboardPage() {
                   {finalActiveLeave && combinedStartDate && !isExtended && (
                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                           {isSingleDayLeave ? (
-                              <>
-                                  <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
-                                      {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
-                                      <span className="font-normal">({totalDuration} hari)</span>
-                                  </div>
-                                  <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                       {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
-                                  </div>
-                              </>
+                            <>
+                                <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
+                                    {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
+                                    <span className="font-normal">({totalDuration} hari)</span>
+                                </div>
+                                <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                                    {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
+                                </div>
+                            </>
                           ) : (
                               <>
                                   <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
@@ -699,7 +701,7 @@ export default function ParentDashboardPage() {
                                                    "{request.reason || "Tidak ada alasan"}"
                                                </p>
                                            </div>
-                                           <Badge variant="outline" className="font-normal">{duration} hari</Badge>
+                                           <Badge variant="outline" className="font-normal">{duration} hari}</Badge>
                                        </div>
                                    )
                                })}
@@ -765,18 +767,22 @@ export default function ParentDashboardPage() {
                         </Button>
                     </>
                     ) : (
-                    <>
-                        <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
-                            <Button size="sm" className="w-full">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Ajukan Izin
+                      <>
+                        {isCurrentPeriodActive && (
+                          <>
+                            <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
+                                <Button size="sm" className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Ajukan Izin
+                                </Button>
+                            </Link>
+                            <Button variant="outline" size="sm" className="flex-1">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                Izin Susulan
                             </Button>
-                        </Link>
-                         <Button variant="outline" size="sm" className="flex-1">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Izin Susulan
-                        </Button>
-                    </>
+                          </>
+                        )}
+                      </>
                     )}
                 </div>
                 <Link href={`/dashboard/riwayat/${student.id}`} passHref>
@@ -939,6 +945,8 @@ export default function ParentDashboardPage() {
     
 
 
+
+    
 
     
 
