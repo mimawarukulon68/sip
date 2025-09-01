@@ -619,8 +619,9 @@ export default function ParentDashboardPage() {
               const totalValidDays = totalSakitDays + totalIzinDays;
               
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
-              const isSingleDayLeave = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) === 0 : false;
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
+              const isSingleDayLeave = totalDuration === 1;
+
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-4 border-b p-4">
@@ -667,12 +668,20 @@ export default function ParentDashboardPage() {
                         </p>
                       </div>
                     )}
-                    {finalActiveLeave && isExtended && (
-                        <div className="mt-3 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
-                             {fullLeaveChain.map((request, index) => {
-                                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                                 const isSakit = request.leave_type.toLowerCase() === 'sakit';
-                                 return (
+                    {finalActiveLeave && combinedStartDate && isExtended && (
+                        <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
+                                {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
+                                <span className="font-normal"> ({totalDuration} hari)</span>
+                            </div>
+                            <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                                {format(parseISO(combinedStartDate), "dd MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
+                            </div>
+                            <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
+                                {fullLeaveChain.map((request, index) => {
+                                    const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                    const isSakit = request.leave_type.toLowerCase() === 'sakit';
+                                    return (
                                     <div key={request.id} className="flex items-start gap-3">
                                         <div className="w-5 pt-0.5">
                                             {index > 0 ? (
@@ -689,9 +698,10 @@ export default function ParentDashboardPage() {
                                         </div>
                                         <Badge variant="outline" className="font-normal">{duration} hari</Badge>
                                     </div>
-                                 )
-                             })}
-                          </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     )}
                 </div>
               <CardContent className="space-y-4 flex-grow pt-4 pb-4 p-4">
@@ -913,3 +923,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
