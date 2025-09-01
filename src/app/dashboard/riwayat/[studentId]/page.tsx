@@ -52,10 +52,12 @@ type LeaveRequest = {
     status: 'AKTIF' | 'SELESAI';
     parent_leave_id: string | null;
     document_url: string | null;
-    parent_profiles: {
-        full_name: string;
-    } | null;
+    created_by_user_id: string;
 };
+
+type ParentProfile = {
+    full_name: string;
+}
 
 type Student = {
     id: string;
@@ -72,12 +74,14 @@ type LeaveRequestChain = {
     final_end_date: string;
     final_status: 'AKTIF' | 'SELESAI';
     document_url: string | null;
+    submitter_name: string | null;
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
   const { studentId } = use(params);
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [parentProfiles, setParentProfiles] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -105,12 +109,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
 
         const requestsPromise = supabase
             .from('leave_requests')
-            .select(`
-                *,
-                parent_profiles (
-                    full_name
-                )
-            `)
+            .select(`*`)
             .eq('student_id', studentId)
             .order('start_date', { ascending: true });
 
@@ -124,6 +123,22 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
 
         setStudent(studentData as Student);
         setLeaveRequests(requestsData as LeaveRequest[] || []);
+
+        if(requestsData && requestsData.length > 0) {
+            const userIds = [...new Set(requestsData.map(req => req.created_by_user_id))];
+            const { data: profiles, error: profilesError } = await supabase
+                .from('parent_profiles')
+                .select('user_id, full_name')
+                .in('user_id', userIds);
+
+            if (profilesError) {
+                console.error("Error fetching parent profiles:", profilesError);
+            } else if (profiles) {
+                const profilesMap = new Map(profiles.map(p => [p.user_id, p.full_name]));
+                setParentProfiles(profilesMap);
+            }
+        }
+        
         setLoading(false);
     }
 
@@ -141,6 +156,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             final_end_date: root.end_date,
             final_status: root.status,
             document_url: root.document_url,
+            submitter_name: parentProfiles.get(root.created_by_user_id) || 'N/A',
         };
 
         let currentLeave = root;
@@ -494,7 +510,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                             </div>
                             <div className="grid grid-cols-3 items-center gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
-                               <div className="col-span-2 font-medium">{chain.root.parent_profiles?.full_name || 'N/A'}</div>
+                               <div className="col-span-2 font-medium">{chain.submitter_name}</div>
                             </div>
                              <div className="grid grid-cols-3 items-start gap-4 pt-4 border-t">
                                 <div className="col-span-1 text-muted-foreground flex items-center gap-2"><ListRestart className="h-4 w-4"/>Kronologi</div>
