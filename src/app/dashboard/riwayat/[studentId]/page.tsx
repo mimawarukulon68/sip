@@ -1,22 +1,12 @@
-
 "use client";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction
-} from "@/components/ui/alert-dialog";
 import { 
   History, 
   Search, 
@@ -47,6 +37,7 @@ type LeaveRequest = {
     reason: string | null;
     status: 'AKTIF' | 'SELESAI';
     parent_leave_id: string | null;
+    document_url: string | null;
 };
 
 type Student = {
@@ -66,8 +57,7 @@ type LeaveRequestChain = {
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const resolvedParams = use(params);
-  const { studentId } = resolvedParams;
+  const { studentId } = params;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +65,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [selectedChain, setSelectedChain] = useState<LeaveRequestChain | null>(null);
   
   useEffect(() => {
     async function fetchData() {
@@ -409,14 +398,12 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                     </div>
                     {getStatusBadge(chain.final_status)}
                   </CardHeader>
-                  <CardContent className="p-6 pt-0">
-                  </CardContent>
                   <CardContent className="p-4 pt-0">
                     <div className="border rounded-lg p-3 text-sm space-y-2 bg-slate-50">
                         {[chain.root, ...chain.extensions].map((request, index) => {
                              const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
                              return (
-                                <div key={request.id} className={cn("pb-2", index < [chain.root, ...chain.extensions].length - 1 && "border-b")}>
+                                <div key={request.id} className={cn("pb-2 pt-2", index > 0 && "border-t")}>
                                     <div className="flex justify-between items-center mb-1">
                                         <p className="font-semibold text-xs">
                                           {index === 0 ? 'Izin Awal' : `Perpanjangan ke-${index}`} ({duration} hari)
@@ -437,7 +424,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
           )}
         </div>
       </main>
-
     </div>
   );
 }
