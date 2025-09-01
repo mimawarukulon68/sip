@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast } from "date-fns";
 import { id } from "date-fns/locale";
@@ -266,7 +266,7 @@ export default function ParentDashboardPage() {
 
   React.useEffect(() => {
     fetchProfileAndData();
-  }, [fetchProfileAndData, searchParams, router]);
+  }, [fetchProfileAndData]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -644,12 +644,37 @@ export default function ParentDashboardPage() {
                         <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
                            {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })} 
                            <span className="font-normal"> ({differenceInCalendarDays(parseISO(finalActiveLeave.end_date), parseISO(combinedStartDate)) + 1} hari)</span>
-                           {isExtended && <Badge variant="secondary" className="text-xs">Diperpanjang</Badge>}
                         </div>
-                        {finalActiveLeave.reason && (
+                        {isExtended ? (
+                          <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
+                             {fullLeaveChain.map((request, index) => {
+                                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                 const isSakit = request.leave_type.toLowerCase() === 'sakit';
+                                 return (
+                                    <div key={request.id} className="flex items-start gap-3">
+                                        <div className="w-5 pt-0.5">
+                                            {index > 0 ? (
+                                                <RefreshCw className="h-4 w-4 text-yellow-600"/>
+                                            ) : (
+                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="italic">
+                                                "{request.reason || "Tidak ada alasan"}"
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className="font-normal">{duration} hari</Badge>
+                                    </div>
+                                 )
+                             })}
+                          </div>
+                        ) : (
+                           finalActiveLeave.reason && (
                             <p className="mt-1 italic">
                                 "{finalActiveLeave.reason}"
                             </p>
+                           )
                         )}
                      </div>
                   )}
@@ -873,6 +898,8 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
 
     
 
