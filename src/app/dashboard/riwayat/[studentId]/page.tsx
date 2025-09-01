@@ -1,5 +1,6 @@
+
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,7 @@ type LeaveRequestChain = {
 }
 
 export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = params;
+  const { studentId } = use(params);
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -382,7 +383,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                              {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
                              <span className="text-base text-gray-600 font-normal"> ({chain.total_duration} hari)</span>
                         </p>
-                         <div className="mt-4 text-left bg-gray-50 rounded-lg p-3 space-y-2 text-sm text-gray-700">
+                         <div className="mt-4 text-left bg-gray-50 rounded-lg p-3 space-y-2 text-sm text-gray-700 border">
                              {[chain.root, ...chain.extensions].map((request, index) => {
                                  const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
                                  const isSakit = request.leave_type.toLowerCase() === 'sakit';
