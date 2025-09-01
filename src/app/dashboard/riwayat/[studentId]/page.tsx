@@ -27,10 +27,8 @@ import {
   ArrowLeft,
   BookUser,
   Archive,
-  ArchiveX,
   Info,
   Clock,
-  XCircle,
   FileText
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
@@ -45,7 +43,7 @@ type LeaveRequest = {
     start_date: string;
     end_date: string;
     reason: string | null;
-    status: 'AKTIF' | 'SELESAI' | 'DIBATALKAN';
+    status: 'AKTIF' | 'SELESAI';
 };
 
 type Student = {
@@ -136,13 +134,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
             SELESAI
           </Badge>
         );
-      case 'DIBATALKAN':
-        return (
-          <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">
-            <ArchiveX className="w-3 h-3 mr-1" />
-            DIBATALKAN
-          </Badge>
-        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -196,7 +187,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
   const permitRequests = validRequests.filter(r => r.leave_type === 'Izin');
   const activeRequests = leaveRequests.filter(r => r.status === 'AKTIF').length;
   const completedRequests = leaveRequests.filter(r => r.status === 'SELESAI').length;
-  const cancelledRequests = leaveRequests.filter(r => r.status === 'DIBATALKAN').length;
 
   const totalSickDays = sickRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
   const totalPermitDays = permitRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
@@ -270,7 +260,7 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
               
               <hr className="my-4"/>
 
-              <div className="grid grid-cols-3 gap-2 text-center text-xs sm:text-sm">
+              <div className="grid grid-cols-2 gap-2 text-center text-xs sm:text-sm">
                   <div>
                       <div className="flex items-center justify-center gap-2 text-green-700">
                             <CheckCircle className="w-4 h-4" />
@@ -284,13 +274,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                             <span className="font-semibold">Aktif</span>
                       </div>
                       <p className="font-bold text-base mt-1">{activeRequests}</p>
-                  </div>
-                    <div>
-                      <div className="flex items-center justify-center gap-2 text-gray-600">
-                            <ArchiveX className="w-4 h-4" />
-                            <span className="font-semibold">Dibatalkan</span>
-                      </div>
-                      <p className="font-bold text-base mt-1">{cancelledRequests}</p>
                   </div>
               </div>
           </CardContent>
@@ -326,7 +309,6 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
                   <SelectItem value="all">Semua Status</SelectItem>
                   <SelectItem value="AKTIF">Aktif</SelectItem>
                   <SelectItem value="SELESAI">Selesai</SelectItem>
-                  <SelectItem value="DIBATALKAN">Dibatalkan</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -427,3 +409,5 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
+
+    

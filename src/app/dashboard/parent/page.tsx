@@ -75,7 +75,7 @@ type LeaveRequest = {
     start_date: string;
     end_date: string;
     reason: string | null;
-    status: 'AKTIF' | 'SELESAI' | 'DIBATALKAN';
+    status: 'AKTIF' | 'SELESAI'; // Removed 'DIBATALKAN'
     document_url: string | null;
     students: {
         full_name: string;
@@ -117,8 +117,8 @@ export default function ParentDashboardPage() {
   const [selectedPeriodId, setSelectedPeriodId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   
-  const [isCancelling, setIsCancelling] = React.useState(false);
-  const [leaveToCancel, setLeaveToCancel] = React.useState<LeaveRequest | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [leaveToDelete, setLeaveToDelete] = React.useState<LeaveRequest | null>(null);
 
   const [isCompleting, setIsCompleting] = React.useState(false);
   const [leaveToComplete, setLeaveToComplete] = React.useState<LeaveRequest | null>(null);
@@ -292,24 +292,24 @@ export default function ParentDashboardPage() {
     router.replace("/");
   };
 
-  const handleConfirmCancel = async () => {
-    if (!leaveToCancel) return;
+  const handleConfirmDelete = async () => {
+    if (!leaveToDelete) return;
     
-    setIsCancelling(true);
+    setIsDeleting(true);
 
     try {
-        if (leaveToCancel.document_url) {
-            const pathSegments = leaveToCancel.document_url.split('/public/dokumen_izin/');
+        if (leaveToDelete.document_url) {
+            const pathSegments = leaveToDelete.document_url.split('/public/dokumen_izin/');
             const path = pathSegments.length > 1 ? decodeURIComponent(pathSegments[1]) : null;
             
             if (path) {
                 const { error: storageError } = await supabase.storage.from('dokumen_izin').remove([path]);
                 if (storageError) {
-                    console.error("Failed to delete document, but continuing with cancellation:", storageError);
+                    console.error("Failed to delete document, but continuing with deletion:", storageError);
                     toast({
                         variant: "destructive",
                         title: "Gagal Menghapus Dokumen",
-                        description: "Dokumen tidak dapat dihapus, namun izin tetap akan dibatalkan. Hubungi admin jika perlu."
+                        description: "Dokumen tidak dapat dihapus, namun izin tetap akan dihapus. Hubungi admin jika perlu."
                     });
                 }
             }
@@ -317,14 +317,14 @@ export default function ParentDashboardPage() {
 
         const { error: dbError } = await supabase
             .from('leave_requests')
-            .update({ status: 'DIBATALKAN' })
-            .eq('id', leaveToCancel.id);
+            .delete()
+            .eq('id', leaveToDelete.id);
 
         if (dbError) throw dbError;
 
         toast({
-            title: "Izin Dibatalkan",
-            description: "Pemberitahuan izin telah berhasil dibatalkan."
+            title: "Izin Dihapus",
+            description: "Pemberitahuan izin telah berhasil dihapus secara permanen."
         });
 
         await fetchProfileAndData();
@@ -332,12 +332,12 @@ export default function ParentDashboardPage() {
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: "Gagal Membatalkan Izin",
+            title: "Gagal Menghapus Izin",
             description: error.message || "Terjadi kesalahan pada server."
         });
     } finally {
-        setIsCancelling(false);
-        setLeaveToCancel(null);
+        setIsDeleting(false);
+        setLeaveToDelete(null);
     }
   };
 
@@ -572,7 +572,6 @@ export default function ParentDashboardPage() {
               }) : [];
               
               const validRequests = filteredRequests.filter(lr => lr.status === 'AKTIF' || lr.status === 'SELESAI');
-              const canceledRequests = filteredRequests.filter(lr => lr.status === 'DIBATALKAN');
 
               const sakitAttendance = validRequests.filter(lr => lr.leave_type === 'Sakit');
               const izinAttendance = validRequests.filter(lr => lr.leave_type === 'Izin');
@@ -648,13 +647,6 @@ export default function ParentDashboardPage() {
                                 <div className="text-sm text-slate-800">({totalValidDays} hari)</div>
                             </div>
                         </div>
-                         <div className="bg-gray-100 rounded-lg p-3 text-center">
-                            <div className="flex items-center justify-center text-xs text-gray-600 gap-2">
-                                <ArchiveX className="h-4 w-4" />
-                                <span>Izin Dibatalkan</span>
-                            </div>
-                            <div className="text-sm font-semibold text-gray-700 mt-1">{canceledRequests.length} kali</div>
-                        </div>
                     </div>
                 </div>
               </CardContent>
@@ -672,7 +664,7 @@ export default function ParentDashboardPage() {
                                 Sudah Masuk
                             </Button>
                         )}
-                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToCancel(activeLeave)}>
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete(activeLeave)}>
                             <X className="mr-2 h-4 w-4" />
                             Batalkan
                         </Button>
@@ -702,24 +694,24 @@ export default function ParentDashboardPage() {
             </Card>
           )})}
         </div>
-         <AlertDialog open={!!leaveToCancel} onOpenChange={(open) => !open && setLeaveToCancel(null)}>
+         <AlertDialog open={!!leaveToDelete} onOpenChange={(open) => !open && setLeaveToDelete(null)}>
             <AlertDialogContent className="max-w-sm rounded-2xl">
                 <AlertDialogHeader className="text-center items-center space-y-0">
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
                         <AlertTriangle className="h-6 w-6 text-red-600" />
                     </div>
-                    <AlertDialogTitle className="text-lg">Batalkan Pengajuan Izin?</AlertDialogTitle>
+                    <AlertDialogTitle className="text-lg">Hapus Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Izin ini akan tercatat sebagai "Dibatalkan" di Riwayat. Dokumen Pendukung izin ini yang terunggah (jika ada) akan dihapus dari sistem.
+                        Aksi ini akan menghapus data izin secara permanen. Tindakan ini tidak dapat diurungkan. Dokumen pendukung yang terunggah (jika ada) juga akan dihapus.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
-                    <AlertDialogCancel onClick={() => setLeaveToCancel(null)} disabled={isCancelling}>
-                        Jangan Batalkan
+                    <AlertDialogCancel onClick={() => setLeaveToDelete(null)} disabled={isDeleting}>
+                        Jangan Hapus
                     </AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirmCancel} disabled={isCancelling} className="bg-destructive hover:bg-destructive/90">
-                         {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Ya, Batalkan Izin
+                    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                         {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Ya, Hapus Izin
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -841,3 +833,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
