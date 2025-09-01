@@ -50,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -119,7 +119,7 @@ export default function ParentDashboardPage() {
   const [loading, setLoading] = React.useState(true);
   
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const [leaveToDelete, setLeaveToDelete] = React.useState<LeaveRequest | null>(null);
+  const [leaveToDelete, setLeaveToDelete] = React.useState<{request: LeaveRequest, isExtension: boolean} | null>(null);
 
   const [isCompleting, setIsCompleting] = React.useState(false);
   const [leaveToComplete, setLeaveToComplete] = React.useState<LeaveRequest | null>(null);
@@ -279,8 +279,8 @@ export default function ParentDashboardPage() {
     setIsDeleting(true);
 
     try {
-        if (leaveToDelete.document_url) {
-            const pathSegments = leaveToDelete.document_url.split('/public/dokumen_izin/');
+        if (leaveToDelete.request.document_url) {
+            const pathSegments = leaveToDelete.request.document_url.split('/public/dokumen_izin/');
             const path = pathSegments.length > 1 ? decodeURIComponent(pathSegments[1]) : null;
             
             if (path) {
@@ -299,7 +299,7 @@ export default function ParentDashboardPage() {
         const { error: dbError } = await supabase
             .from('leave_requests')
             .delete()
-            .eq('id', leaveToDelete.id);
+            .eq('id', leaveToDelete.request.id);
 
         if (dbError) throw dbError;
 
@@ -622,6 +622,8 @@ export default function ParentDashboardPage() {
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
               const isSingleDayLeave = totalDuration === 1;
 
+              const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) : false;
+
             return (
             <Card key={student.id} className="shadow-md rounded-xl flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-4 border-b p-4">
@@ -649,7 +651,7 @@ export default function ParentDashboardPage() {
                                 <span className="font-normal"> ({totalDuration} hari)</span>
                             </div>
                              <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                               {format(parseISO(combinedStartDate), "dd MMM yyyy", { locale: id })}
+                               {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
                             </div>
                           </>
                         ) : (
@@ -659,7 +661,7 @@ export default function ParentDashboardPage() {
                                 <span className="font-normal"> ({totalDuration} hari)</span>
                             </div>
                              <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                               {format(parseISO(combinedStartDate), "dd MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
+                               {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
                             </div>
                           </>
                         )}
@@ -675,7 +677,7 @@ export default function ParentDashboardPage() {
                                 <span className="font-normal"> ({totalDuration} hari)</span>
                             </div>
                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "dd MMM yyyy", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
+                                {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
                             </div>
                             <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                                 {fullLeaveChain.map((request, index) => {
@@ -684,11 +686,7 @@ export default function ParentDashboardPage() {
                                     return (
                                     <div key={request.id} className="flex items-start gap-3">
                                         <div className="w-5 pt-0.5">
-                                            {index > 0 ? (
-                                                <RefreshCw className="h-4 w-4 text-yellow-600"/>
-                                            ) : (
-                                                <FileSignature className="h-4 w-4 text-gray-600" />
-                                            )}
+                                             <FileSignature className="h-4 w-4 text-gray-600" />
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
@@ -744,19 +742,21 @@ export default function ParentDashboardPage() {
                  <div className="flex gap-2 flex-wrap">
                     {finalActiveLeave ? (
                      <>
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setLeaveToExtend(finalActiveLeave)}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Perpanjang
-                        </Button>
+                        {canExtend && (
+                           <Button variant="outline" size="sm" className="flex-1" onClick={() => setLeaveToExtend(finalActiveLeave)}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Perpanjang
+                            </Button>
+                        )}
                         {!isSingleDayLeave && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
                                 <Check className="mr-2 h-4 w-4" />
                                 Sudah Masuk
                             </Button>
                         )}
-                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete(finalActiveLeave)}>
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete({request: finalActiveLeave, isExtension: isExtended})}>
                             <X className="mr-2 h-4 w-4" />
-                            Batalkan
+                            {isExtended ? 'Batalkan Perpanjangan' : 'Batalkan'}
                         </Button>
                     </>
                     ) : (
@@ -792,7 +792,10 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Hapus Pengajuan Izin?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Aksi ini akan menghapus data izin secara permanen. Tindakan ini tidak dapat diurungkan. Dokumen pendukung yang terunggah (jika ada) juga akan dihapus.
+                       {leaveToDelete?.isExtension
+                            ? "Aksi ini akan menghapus data perpanjangan terakhir. Izin sebelumnya tidak akan terpengaruh. Tindakan ini tidak dapat diurungkan."
+                            : "Aksi ini akan menghapus data izin ini secara permanen. Tindakan ini tidak dapat diurungkan."
+                        }
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
@@ -801,7 +804,7 @@ export default function ParentDashboardPage() {
                     </AlertDialogCancel>
                     <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                          {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Ya, Hapus Izin
+                         {leaveToDelete?.isExtension ? 'Ya, Hapus Perpanjangan' : 'Ya, Hapus Izin'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -923,5 +926,7 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
 
     
