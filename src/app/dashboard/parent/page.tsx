@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, BookOpen, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX, ClipboardList } from "lucide-react";
+import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, ArchiveX, ClipboardList } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday } from "date-fns";
 import { id } from "date-fns/locale";
@@ -527,7 +527,7 @@ export default function ParentDashboardPage() {
         <Card className="shadow-sm">
             <CardHeader className="p-4">
                 <CardTitle className="flex items-center gap-3 text-lg">
-                    <BookOpen className="h-6 w-6 text-primary" />
+                    <CalendarRange className="h-6 w-6 text-primary" />
                     <span>Periode Akademik</span>
                 </CardTitle>
                  <CardDescription>
@@ -642,7 +642,7 @@ export default function ParentDashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
-                  {finalActiveLeave && combinedStartDate && !isExtended && (
+                   {finalActiveLeave && combinedStartDate && !isExtended && (
                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                           {isSingleDayLeave ? (
                               <>
@@ -651,7 +651,7 @@ export default function ParentDashboardPage() {
                                       <span className="font-normal">({totalDuration} hari)</span>
                                   </div>
                                   <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                      {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
+                                       {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
                                   </div>
                               </>
                           ) : (
@@ -675,10 +675,10 @@ export default function ParentDashboardPage() {
                           <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
                                 <span className="font-normal">({totalDuration} hari)</span>
-                            </div>
-                            <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
-                            </div>
+                          </div>
+                          <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                              {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
+                          </div>
                            <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                                {fullLeaveChain.map((request, index) => {
                                    const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
@@ -688,10 +688,10 @@ export default function ParentDashboardPage() {
                                        <div key={request.id} className="flex items-start gap-3">
                                            <div className="w-5 pt-0.5">
                                                {isFirst ? (
-                                                   <FileSignature className="h-4 w-4 text-gray-600" />
-                                               ) : (
-                                                   <RefreshCw className="h-4 w-4 text-amber-600" />
-                                               )}
+                                                    <FileSignature className="h-4 w-4 text-gray-600" />
+                                                ) : (
+                                                    <RefreshCw className="h-4 w-4 text-amber-600" />
+                                                )}
                                            </div>
                                            <div className="flex-1">
                                                <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
@@ -939,5 +939,7 @@ export default function ParentDashboardPage() {
     
 
 
+
+    
 
     
