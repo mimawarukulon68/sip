@@ -30,7 +30,8 @@ import {
   ArchiveX,
   Info,
   Clock,
-  XCircle
+  XCircle,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -426,4 +427,3 @@ export default function StudentHistoryPage({ params }: { params: { studentId: st
     </div>
   );
 }
-
