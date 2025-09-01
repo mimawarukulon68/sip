@@ -571,7 +571,15 @@ export default function ParentDashboardPage() {
         </Card>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
-              const activeLeaves = student.leave_requests.filter(lr => lr.status === 'AKTIF');
+              const selectedPeriod = allAcademicPeriods.find(p => p.id === selectedPeriodId);
+              
+              const periodRequests = selectedPeriod ? student.leave_requests.filter(lr => {
+                  const leaveStartDate = parseISO(lr.start_date);
+                  const periodInterval = { start: parseISO(selectedPeriod.start_date), end: parseISO(selectedPeriod.end_date) };
+                  return isWithinInterval(leaveStartDate, periodInterval);
+              }) : [];
+
+              const activeLeaves = periodRequests.filter(lr => lr.status === 'AKTIF');
               const activeLeaveRoots = activeLeaves.filter(lr => !lr.parent_leave_id);
 
               let finalActiveLeave: LeaveRequest | undefined = undefined;
@@ -600,16 +608,8 @@ export default function ParentDashboardPage() {
 
               const badgeInfo = getBadgeInfo(finalActiveLeave);
               const isExtended = fullLeaveChain.length > 1;
-              
-              const selectedPeriod = allAcademicPeriods.find(p => p.id === selectedPeriodId);
-              
-              const filteredRequests = selectedPeriod ? student.leave_requests.filter(lr => {
-                  const leaveStartDate = parseISO(lr.start_date);
-                  const periodInterval = { start: parseISO(selectedPeriod.start_date), end: parseISO(selectedPeriod.end_date) };
-                  return isWithinInterval(leaveStartDate, periodInterval);
-              }) : [];
-              
-              const validRequests = filteredRequests.filter(lr => lr.status === 'AKTIF' || lr.status === 'SELESAI');
+                            
+              const validRequests = periodRequests.filter(lr => lr.status === 'AKTIF' || lr.status === 'SELESAI');
 
               const sakitAttendance = validRequests.filter(lr => lr.leave_type === 'Sakit');
               const izinAttendance = validRequests.filter(lr => lr.leave_type === 'Izin');
@@ -642,7 +642,7 @@ export default function ParentDashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
-                   {finalActiveLeave && combinedStartDate && !isExtended && (
+                  {finalActiveLeave && combinedStartDate && !isExtended && (
                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                           {isSingleDayLeave ? (
                               <>
@@ -671,7 +671,7 @@ export default function ParentDashboardPage() {
                       </div>
                   )}
                   {finalActiveLeave && combinedStartDate && isExtended && (
-                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                      <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                           <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
                                 <span className="font-normal">({totalDuration} hari)</span>
@@ -939,6 +939,8 @@ export default function ParentDashboardPage() {
     
 
 
+
+    
 
     
 
