@@ -15,58 +15,63 @@ export default function DashboardRedirectPage() {
 
   useEffect(() => {
     async function getUserAndRedirect() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          router.replace('/');
+          return;
+        }
+
+        let role: UserRole = null;
+
+        // 1. Check for admin
+        const { data: adminProfile } = await supabase
+          .from('admin_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        if (adminProfile) {
+          role = 'admin';
+        }
+
+        // 2. Check for teacher
+        if (!role) {
+          const { data: teacherProfile } = await supabase
+            .from('teacher_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          if (teacherProfile) {
+            role = 'teacher';
+          }
+        }
+
+        // 3. Check for parent
+        if (!role) {
+          const { data: parentProfile } = await supabase
+            .from('parent_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          if (parentProfile) {
+            role = 'parent';
+          }
+        }
+        
+        setLoading(false);
+
+        if (role) {
+          router.replace(`/dashboard/${role}`);
+        } else {
+          // Handle user with no profile
+          console.error("User has no profile role assigned.");
+          await supabase.auth.signOut();
+          router.replace('/?error=no_role');
+        }
+      } catch (error) {
+        console.error("Authentication error, redirecting to login:", error);
         router.replace('/');
-        return;
-      }
-
-      let role: UserRole = null;
-
-      // 1. Check for admin
-      const { data: adminProfile } = await supabase
-        .from('admin_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (adminProfile) {
-        role = 'admin';
-      }
-
-      // 2. Check for teacher
-      if (!role) {
-        const { data: teacherProfile } = await supabase
-          .from('teacher_profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        if (teacherProfile) {
-          role = 'teacher';
-        }
-      }
-
-      // 3. Check for parent
-      if (!role) {
-        const { data: parentProfile } = await supabase
-          .from('parent_profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        if (parentProfile) {
-          role = 'parent';
-        }
-      }
-      
-      setLoading(false);
-
-      if (role) {
-        router.replace(`/dashboard/${role}`);
-      } else {
-        // Handle user with no profile
-        console.error("User has no profile role assigned.");
-        await supabase.auth.signOut();
-        router.replace('/?error=no_role');
       }
     }
 
