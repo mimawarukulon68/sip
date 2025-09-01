@@ -541,7 +541,7 @@ export default function ParentDashboardPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-0 flex gap-2">
-                <div className="w-2/5">
+                <div style={{width: '45%'}}>
                     <Label htmlFor="academic-year" className="text-sm font-medium mb-2 block">Tahun Ajaran</Label>
                     <Select onValueChange={handleYearChange} value={selectedAcademicYear || ''}>
                         <SelectTrigger id="academic-year">
@@ -554,7 +554,7 @@ export default function ParentDashboardPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="w-3/5">
+                <div style={{width: '55%'}}>
                      <Label htmlFor="academic-period" className="text-sm font-medium mb-2 block">Periode</Label>
                     <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId || ''} disabled={!selectedAcademicYear}>
                         <SelectTrigger id="academic-period">
@@ -642,70 +642,70 @@ export default function ParentDashboardPage() {
                   <Badge variant="outline" className={`w-full justify-center ${badgeInfo.className}`}>
                         {badgeInfo.text}
                   </Badge>
-                    {finalActiveLeave && combinedStartDate && !isExtended && (
+                  {finalActiveLeave && combinedStartDate && !isExtended && (
                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
-                        {isSingleDayLeave ? (
-                           <>
-                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
-                                <span className="font-normal"> ({totalDuration} hari)</span>
-                            </div>
-                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                               {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
-                                <span className="font-normal"> ({totalDuration} hari)</span>
-                            </div>
-                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                               {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
-                            </div>
-                          </>
-                        )}
-                        <p className="mt-1 italic">
-                            "{finalActiveLeave.reason || 'Tidak ada alasan'}"
-                        </p>
+                          {isSingleDayLeave ? (
+                              <>
+                                  <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
+                                      {format(parseISO(combinedStartDate), "EEEE", { locale: id })}
+                                      <span className="font-normal">({totalDuration} hari)</span>
+                                  </div>
+                                  <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                                      {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })}
+                                  </div>
+                              </>
+                          ) : (
+                              <>
+                                  <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
+                                      {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
+                                      <span className="font-normal">({totalDuration} hari)</span>
+                                  </div>
+                                  <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                                      {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
+                                  </div>
+                              </>
+                          )}
+                          <p className="mt-1 italic">
+                              "{finalActiveLeave.reason || 'Tidak ada alasan'}"
+                          </p>
                       </div>
-                    )}
-                    {finalActiveLeave && combinedStartDate && isExtended && (
-                        <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
-                            <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
+                  )}
+                  {finalActiveLeave && combinedStartDate && isExtended && (
+                       <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                          <div className="font-normal text-slate-800 flex justify-center items-center gap-1">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
-                                <span className="font-normal"> ({totalDuration} hari)</span>
+                                <span className="font-normal">({totalDuration} hari)</span>
                             </div>
                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "d MMM yyyy", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
+                                {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })}
                             </div>
-                            <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
-                                {fullLeaveChain.map((request, index) => {
-                                    const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                                    const isFirst = index === 0;
-                                    const isSakit = request.leave_type === 'Sakit';
-                                    return (
-                                    <div key={request.id} className="flex items-start gap-3">
-                                        <div className="w-5 pt-0.5">
-                                            {isFirst ? (
-                                                <FileSignature className="h-4 w-4 text-gray-600" />
-                                            ) : (
-                                                <RefreshCw className="h-4 w-4 text-amber-600" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
-                                            <p className="italic">
-                                                "{request.reason || "Tidak ada alasan"}"
-                                            </p>
-                                        </div>
-                                        <Badge variant="outline" className="font-normal">{duration} hari</Badge>
-                                    </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
+                           <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
+                               {fullLeaveChain.map((request, index) => {
+                                   const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                                   const isFirst = index === 0;
+                                   const isSakit = request.leave_type === 'Sakit';
+                                   return (
+                                       <div key={request.id} className="flex items-start gap-3">
+                                           <div className="w-5 pt-0.5">
+                                               {isFirst ? (
+                                                   <FileSignature className="h-4 w-4 text-gray-600" />
+                                               ) : (
+                                                   <RefreshCw className="h-4 w-4 text-amber-600" />
+                                               )}
+                                           </div>
+                                           <div className="flex-1">
+                                               <p className="font-semibold">{index > 0 ? `Perpanjangan ${index}` : 'Awal'}</p>
+                                               <p className="italic">
+                                                   "{request.reason || "Tidak ada alasan"}"
+                                               </p>
+                                           </div>
+                                           <Badge variant="outline" className="font-normal">{duration} hari</Badge>
+                                       </div>
+                                   )
+                               })}
+                           </div>
+                       </div>
+                  )}
                 </div>
               <CardContent className="space-y-4 flex-grow pt-4 pb-4 p-4">
                  <div className="border bg-slate-50/50 rounded-lg p-4">
@@ -938,3 +938,6 @@ export default function ParentDashboardPage() {
 
     
 
+
+
+    
