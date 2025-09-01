@@ -363,7 +363,6 @@ export default function ParentDashboardPage() {
         return;
     }
     
-    // Find the student this leave belongs to
     const student = students.find(s => s.leave_requests.some(lr => lr.id === leaveToExtend.id));
     if (!student) {
          toast({ variant: "destructive", title: "Error", description: "Siswa tidak ditemukan." });
@@ -600,6 +599,7 @@ export default function ParentDashboardPage() {
 
 
               const badgeInfo = getBadgeInfo(finalActiveLeave);
+              const isExtended = fullLeaveChain.length > 1;
               
               const selectedPeriod = allAcademicPeriods.find(p => p.id === selectedPeriodId);
               
@@ -641,10 +641,11 @@ export default function ParentDashboardPage() {
                   </Badge>
                   {finalActiveLeave && combinedStartDate && (
                      <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
-                        <p className="font-semibold text-slate-800">
-                           {format(parseISO(combinedStartDate), "d MMMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMMM yyyy", { locale: id })} 
+                        <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
+                           {format(parseISO(combinedStartDate), "d MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "d MMM yyyy", { locale: id })} 
                            <span className="font-normal"> ({differenceInCalendarDays(parseISO(finalActiveLeave.end_date), parseISO(combinedStartDate)) + 1} hari)</span>
-                        </p>
+                           {isExtended && <Badge variant="secondary" className="text-xs">Diperpanjang</Badge>}
+                        </div>
                         {finalActiveLeave.reason && (
                             <p className="mt-1 italic">
                                 "{finalActiveLeave.reason}"
@@ -872,5 +873,7 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
 
     
