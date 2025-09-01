@@ -669,13 +669,13 @@ export default function ParentDashboardPage() {
                       </div>
                     )}
                     {finalActiveLeave && combinedStartDate && isExtended && (
-                        <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
+                         <div className="mt-3 text-center text-xs text-muted-foreground p-2 bg-slate-50 rounded-md">
                             <div className="font-normal text-slate-800 flex justify-center items-center gap-2">
                                 {format(parseISO(combinedStartDate), "EEEE", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "EEEE", { locale: id })}
                                 <span className="font-normal"> ({totalDuration} hari)</span>
                             </div>
                             <div className="font-semibold text-slate-800 flex justify-center items-center gap-2">
-                                {format(parseISO(combinedStartDate), "dd MMM", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
+                                {format(parseISO(combinedStartDate), "dd MMM yyyy", { locale: id })} - {format(parseISO(finalActiveLeave.end_date), "dd MMM yyyy", { locale: id })}
                             </div>
                             <div className="mt-2 text-left bg-gray-100 rounded-lg p-3 space-y-2 text-xs text-gray-700 border">
                                 {fullLeaveChain.map((request, index) => {
@@ -687,7 +687,7 @@ export default function ParentDashboardPage() {
                                             {index > 0 ? (
                                                 <RefreshCw className="h-4 w-4 text-yellow-600"/>
                                             ) : (
-                                                isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <FileText className="h-4 w-4 text-blue-600"/>
+                                                <FileSignature className="h-4 w-4 text-gray-600" />
                                             )}
                                         </div>
                                         <div className="flex-1">
