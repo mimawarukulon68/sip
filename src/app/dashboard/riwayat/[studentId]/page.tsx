@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -77,8 +78,9 @@ type LeaveRequestChain = {
     submitter_name: string | null;
 }
 
-export default function StudentHistoryPage({ params }: { params: { studentId: string } }) {
-  const { studentId } = params;
+export default function StudentHistoryPage() {
+  const params = useParams();
+  const studentId = params.studentId as string;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [parentProfiles, setParentProfiles] = useState<Map<string, string>>(new Map());
