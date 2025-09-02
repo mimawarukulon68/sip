@@ -42,7 +42,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus, HelpCircle } from "lucide-react";
+import { RefreshCcwDot, PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus, HelpCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore, subDays, isSameDay } from "date-fns";
 import { id } from "date-fns/locale";
@@ -733,7 +733,7 @@ export default function ParentDashboardPage() {
                          {canCancel && (
                             <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete({request: finalActiveLeave, isExtension: isExtended})}>
                                 <CircleX className="mr-2 h-4 w-4" />
-                                {isExtended ? 'Batalkan Perpanjangan' : 'Batalkan Izin'}
+                                {isExtended ? 'Batalkan Perpanjangan' : 'Batalkan'}
                             </Button>
                          )}
                     </>
@@ -798,6 +798,7 @@ export default function ParentDashboardPage() {
             </Card>
           )})}
         </div>
+        
          <AlertDialog open={!!leaveToDelete} onOpenChange={(open) => !open && setLeaveToDelete(null)}>
             <AlertDialogContent className="max-w-sm rounded-2xl">
                 <AlertDialogHeader className="text-center items-center space-y-0">
@@ -850,12 +851,12 @@ export default function ParentDashboardPage() {
         </AlertDialog>
 
         <AlertDialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
-            <AlertDialogContent className="max-w-md">
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-3">
-                      <HelpCircle className="h-6 w-6 text-primary"/>
-                      Deteksi Perpanjangan
-                    </AlertDialogTitle>
+            <AlertDialogContent className="max-w-sm rounded-2xl">
+                <AlertDialogHeader className="text-center items-center">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+                        <RefreshCcwDot className="h-6 w-6 text-green-600" />
+                    </div>
+                    <AlertDialogTitle className="text-lg">Deteksi Perpanjangan</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
                         Izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin.
                         Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
@@ -876,12 +877,12 @@ export default function ParentDashboardPage() {
         </AlertDialog>
 
         <AlertDialog open={showExtensionConfirmDialog} onOpenChange={setShowExtensionConfirmDialog}>
-            <AlertDialogContent className="max-w-sm">
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-3">
-                      <RefreshCw className="h-6 w-6 text-primary"/>
-                      Konfirmasi Perpanjangan Izin
-                    </AlertDialogTitle>
+            <AlertDialogContent className="max-w-sm rounded-2xl">
+                <AlertDialogHeader className="text-center items-center">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+                        <RefreshCw className="h-6 w-6 text-green-600" />
+                    </div>
+                    <AlertDialogTitle className="text-lg">Konfirmasi Perpanjangan Izin</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
                        Anda akan memperpanjang izin yang sedang aktif. Anda akan diarahkan ke formulir perpanjangan. Lanjutkan?
                     </AlertDialogDescription>
