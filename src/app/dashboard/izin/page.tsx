@@ -102,6 +102,7 @@ export default function PermissionFormPage() {
   
   const [isExtensionMode, setIsExtensionMode] = React.useState(false);
   const [originalLeave, setOriginalLeave] = React.useState<LeaveRequest | null>(null);
+  const [showExtendDialog, setShowExtendDialog] = React.useState(false);
   const [extendableLeave, setExtendableLeave] = React.useState<LeaveRequest | null>(null);
   const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
 
@@ -200,6 +201,7 @@ export default function PermissionFormPage() {
             });
             if (suggestData) {
                 setExtendableLeave(suggestData as LeaveRequest);
+                setShowExtendDialog(true);
             }
         }
 
@@ -347,6 +349,16 @@ export default function PermissionFormPage() {
     }
   }
 
+  const handleExtendDialogAction = (action: 'extend' | 'new' | 'cancel') => {
+    setShowExtendDialog(false);
+    if (action === 'extend' && extendableLeave) {
+        router.push(`/dashboard/izin?studentId=${student?.id}&extend=${extendableLeave.id}`);
+    } else if (action === 'cancel') {
+        router.push('/dashboard');
+    }
+    // If 'new', do nothing, just close the dialog.
+  };
+
   if (loading) {
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/10">
@@ -390,19 +402,26 @@ export default function PermissionFormPage() {
 
   return (
     <>
-    <AlertDialog open={!!extendableLeave} onOpenChange={(open) => !open && setExtendableLeave(null)}>
+    <AlertDialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Izin Baru Saja Berakhir?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Kami melihat izin <strong>{extendableLeave?.leave_type}</strong> untuk <strong>{student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut?
+                    Kami melihat izin <strong>{extendableLeave?.leave_type}</strong> untuk <strong>{student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
                 </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setExtendableLeave(null)}>Buat Izin Baru</AlertDialogCancel>
-                <AlertDialogAction onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${extendableLeave?.id}`)}>
-                    Ya, Perpanjang Izin
-                </AlertDialogAction>
+            <AlertDialogFooter className="sm:justify-between">
+                 <Button variant="outline" onClick={() => handleExtendDialogAction('cancel')}>
+                    Batal
+                 </Button>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={() => handleExtendDialogAction('new')}>
+                        Buat Izin Baru
+                    </Button>
+                    <AlertDialogAction onClick={() => handleExtendDialogAction('extend')}>
+                        Ya, Perpanjang Izin
+                    </AlertDialogAction>
+                </div>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>

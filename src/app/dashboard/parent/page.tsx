@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -115,8 +115,6 @@ export default function ParentDashboardPage() {
   const [lateSubmissionType, setLateSubmissionType] = React.useState<'extend-late' | 'new-late'>('new-late');
   const [lateSubmissionStudentId, setLateSubmissionStudentId] = React.useState<string | null>(null);
   
-  const [leaveToExtend, setLeaveToExtend] = React.useState<{studentId: string, leaveId: string} | null>(null);
-
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
     const years = new Set(allAcademicPeriods.map(p => p.academic_year));
@@ -209,7 +207,7 @@ export default function ParentDashboardPage() {
 
             const updatePromises = studentData.flatMap(student => 
                 student.leave_requests
-                    .filter(lr => lr.status === 'AKTIF' && isPast(addDays(parseISO(lr.end_date), 1)))
+                    .filter(lr => lr.status === 'AKTIF' && isBefore(parseISO(lr.end_date), today))
                     .map(lr => {
                         dataNeedsRefresh = true;
                         console.log(`Updating expired leave request ${lr.id} for student ${student.full_name}`);
@@ -330,10 +328,6 @@ export default function ParentDashboardPage() {
     }
   };
   
-  const handleConfirmExtend = () => {
-    if (!leaveToExtend) return;
-    router.push(`/dashboard/izin?studentId=${leaveToExtend.studentId}&extend=${leaveToExtend.leaveId}`);
-  };
 
   const handleYearChange = (year: string) => {
     setSelectedAcademicYear(year);
@@ -549,10 +543,9 @@ export default function ParentDashboardPage() {
               
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
-              const isSingleDayLeave = totalDuration === 1;
-
+              
               const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) || isPast(parseISO(finalActiveLeave.end_date)) : false;
-              const canComplete = finalActiveLeave && !isSingleDayLeave ? isAfter(startOfToday(), parseISO(combinedStartDate)) : false;
+              const canComplete = finalActiveLeave && totalDuration > 1 && isAfter(startOfToday(), parseISO(combinedStartDate));
               const canCancel = !!finalActiveLeave;
               
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
@@ -680,28 +673,10 @@ export default function ParentDashboardPage() {
                     {finalActiveLeave ? (
                      <>
                         {canExtend && isCurrentPeriodActive && (
-                           <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                     <Button variant="outline" size="sm" className="w-full flex-1">
-                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                        Perpanjang
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Konfirmasi Perpanjangan Izin</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Anda akan memperpanjang izin untuk <strong>{student.full_name}</strong>. Apakah Anda yakin ingin melanjutkan?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`)}>
-                                            Ya, Lanjutkan
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button variant="outline" size="sm" className="w-full flex-1" onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`)}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Perpanjang
+                            </Button>
                         )}
                         {canComplete && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
