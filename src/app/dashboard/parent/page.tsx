@@ -310,10 +310,15 @@ export default function ParentDashboardPage() {
     try {
       const today = new Date();
       today.setHours(0,0,0,0);
+      
       const { error } = await supabase
         .from('leave_requests')
-        .update({ status: 'SELESAI', end_date: format(subDays(today,1), 'yyyy-MM-dd') })
-        .eq('id', leaveToComplete.id);
+        .update({ 
+            status: 'SELESAI', 
+            end_date: format(subDays(today,1), 'yyyy-MM-dd') 
+        })
+        .eq('id', leaveToComplete.id)
+        .lt('start_date', format(today, 'yyyy-MM-dd'));
 
       if (error) throw error;
 
@@ -575,7 +580,7 @@ export default function ParentDashboardPage() {
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
               
               const canExtend = !!finalActiveLeave;
-              const canComplete = finalActiveLeave && isAfter(startOfToday(), parseISO(combinedStartDate)) && !isToday(parseISO(combinedStartDate));
+              const canComplete = finalActiveLeave && isAfter(startOfToday(), parseISO(combinedStartDate as string));
               const canCancel = !!finalActiveLeave;
               
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
@@ -841,11 +846,10 @@ export default function ParentDashboardPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-3">
                       <HelpCircle className="h-6 w-6 text-primary"/>
-                      Izin Baru Saja Berakhir?
+                      Deteksi Perpanjangan
                     </AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Kami melihat izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin.
-                        <br/>
+                        Izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin.
                         Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
