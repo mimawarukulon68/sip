@@ -114,6 +114,8 @@ export default function ParentDashboardPage() {
   
   const [lateSubmissionType, setLateSubmissionType] = React.useState<'extend-late' | 'new-late'>('new-late');
   const [lateSubmissionStudentId, setLateSubmissionStudentId] = React.useState<string | null>(null);
+  
+  const [leaveToExtend, setLeaveToExtend] = React.useState<{studentId: string, leaveId: string} | null>(null);
 
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
@@ -328,6 +330,11 @@ export default function ParentDashboardPage() {
     }
   };
   
+  const handleConfirmExtend = () => {
+    if (!leaveToExtend) return;
+    router.push(`/dashboard/izin?studentId=${leaveToExtend.studentId}&extend=${leaveToExtend.leaveId}`);
+  };
+
   const handleYearChange = (year: string) => {
     setSelectedAcademicYear(year);
     const firstPeriod = allAcademicPeriods.find(p => p.academic_year === year);
@@ -673,12 +680,28 @@ export default function ParentDashboardPage() {
                     {finalActiveLeave ? (
                      <>
                         {canExtend && isCurrentPeriodActive && (
-                           <Link href={`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`} className="flex-1">
-                                <Button variant="outline" size="sm" className="w-full">
-                                    <RefreshCw className="mr-2 h-4 w-4" />
-                                    Perpanjang
-                                </Button>
-                           </Link>
+                           <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                     <Button variant="outline" size="sm" className="w-full flex-1">
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                        Perpanjang
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Konfirmasi Perpanjangan Izin</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Anda akan memperpanjang izin untuk <strong>{student.full_name}</strong>. Apakah Anda yakin ingin melanjutkan?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`)}>
+                                            Ya, Lanjutkan
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         )}
                         {canComplete && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
@@ -810,5 +833,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
