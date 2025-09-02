@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, Check, X, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive } from "lucide-react";
+import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter } from "date-fns";
 import { id } from "date-fns/locale";
@@ -218,9 +218,9 @@ export default function ParentDashboardPage() {
                     .in('id', studentIds);
                 
                 if (refreshedError) console.error("Error refetching student data:", refreshedError);
-                setStudents((refreshedStudentData as StudentData[]) || []);
+                setStudents((refreshedStudentData as unknown as StudentData[]) || []);
             } else {
-                setStudents(studentData as StudentData[]);
+                setStudents(studentData as unknown as StudentData[]);
             }
         }
     }
@@ -671,13 +671,13 @@ export default function ParentDashboardPage() {
                         )}
                         {canComplete && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
-                                <Check className="mr-2 h-4 w-4" />
+                                <CircleCheckBig className="mr-2 h-4 w-4" />
                                 Sudah Masuk
                             </Button>
                         )}
                          {canCancel && (
                             <Button variant="destructive" size="sm" className="flex-1" onClick={() => setLeaveToDelete({request: finalActiveLeave, isExtension: isExtended})}>
-                                <X className="mr-2 h-4 w-4" />
+                                <CircleX className="mr-2 h-4 w-4" />
                                 {isExtended ? 'Batalkan Perpanjangan' : 'Batalkan Izin'}
                             </Button>
                          )}
@@ -743,7 +743,7 @@ export default function ParentDashboardPage() {
             <AlertDialogContent className="max-w-sm rounded-2xl">
                 <AlertDialogHeader className="text-center items-center">
                      <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10 mb-4">
-                        <Check className="h-6 w-6 text-green-600" />
+                        <CircleCheckBig className="h-6 w-6 text-green-600" />
                     </div>
                     <AlertDialogTitle className="text-lg">Konfirmasi Siswa Sudah Masuk?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
