@@ -837,40 +837,40 @@ export default function ParentDashboardPage() {
         </AlertDialog>
 
         <AlertDialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
-            <AlertDialogContent>
+            <AlertDialogContent className="max-w-md">
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertDialogTitle className="flex items-center gap-3">
                       <HelpCircle className="h-6 w-6 text-primary"/>
                       Izin Baru Saja Berakhir?
                     </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Kami melihat izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
+                    <AlertDialogDescription className="pt-2">
+                        Kami melihat izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin.
+                        <br/>
+                        Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="sm:justify-between pt-4">
-                     <AlertDialogCancel onClick={() => setShowExtensionDialog(false)}>
+                <AlertDialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                    <AlertDialogCancel onClick={() => setShowExtensionDialog(false)}>
                         Batal
-                     </AlertDialogCancel>
-                    <div className="flex gap-2">
-                        <Button variant="secondary" onClick={() => handleExtensionDialogAction('new')}>
-                            Buat Izin Baru
-                        </Button>
-                        <AlertDialogAction onClick={() => handleExtensionDialogAction('extend')}>
-                            Ya, Perpanjang Izin
-                        </AlertDialogAction>
-                    </div>
+                    </AlertDialogCancel>
+                    <Button variant="outline" onClick={() => handleExtensionDialogAction('new')}>
+                        Buat Izin Baru
+                    </Button>
+                    <AlertDialogAction onClick={() => handleExtensionDialogAction('extend')}>
+                        Ya, Perpanjang Izin
+                    </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={showExtensionConfirmDialog} onOpenChange={setShowExtensionConfirmDialog}>
-            <AlertDialogContent>
+            <AlertDialogContent className="max-w-md">
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertDialogTitle className="flex items-center gap-3">
                       <RefreshCw className="h-6 w-6 text-primary"/>
                       Konfirmasi Perpanjangan Izin
                     </AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDescription className="pt-2">
                        Anda akan memperpanjang izin yang sedang aktif. Anda akan diarahkan ke formulir perpanjangan. Lanjutkan?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -892,3 +892,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
