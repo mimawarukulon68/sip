@@ -37,12 +37,14 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive } from "lucide-react";
+import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +111,9 @@ export default function ParentDashboardPage() {
 
   const [isCompleting, setIsCompleting] = React.useState(false);
   const [leaveToComplete, setLeaveToComplete] = React.useState<LeaveRequest | null>(null);
+  
+  const [lateSubmissionType, setLateSubmissionType] = React.useState<'extend-late' | 'new-late'>('new-late');
+  const [lateSubmissionStudentId, setLateSubmissionStudentId] = React.useState<string | null>(null);
 
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
@@ -237,6 +242,11 @@ export default function ParentDashboardPage() {
     await supabase.auth.signOut();
     router.replace("/");
   };
+  
+  const handleLateSubmissionContinue = () => {
+    if (!lateSubmissionStudentId) return;
+    router.push(`/dashboard/izin-susulan?studentId=${lateSubmissionStudentId}&type=${lateSubmissionType}`);
+  }
 
   const handleConfirmDelete = async () => {
     if (!leaveToDelete) return;
@@ -532,9 +542,10 @@ export default function ParentDashboardPage() {
               
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
-              
+              const isSingleDayLeave = totalDuration === 1;
+
               const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) || isPast(parseISO(finalActiveLeave.end_date)) : false;
-              const canComplete = finalActiveLeave && totalDuration > 1 ? isAfter(new Date(), parseISO(combinedStartDate)) : false;
+              const canComplete = finalActiveLeave && !isSingleDayLeave ? isAfter(startOfToday(), parseISO(combinedStartDate)) : false;
               const canCancel = !!finalActiveLeave;
               
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
@@ -661,7 +672,7 @@ export default function ParentDashboardPage() {
                  <div className="flex gap-2 flex-wrap">
                     {finalActiveLeave ? (
                      <>
-                        {canExtend && (
+                        {canExtend && isCurrentPeriodActive && (
                            <Link href={`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`} className="flex-1">
                                 <Button variant="outline" size="sm" className="w-full">
                                     <RefreshCw className="mr-2 h-4 w-4" />
@@ -692,10 +703,44 @@ export default function ParentDashboardPage() {
                                 Ajukan Izin
                                 </Button>
                             </Link>
-                            <Button variant="outline" size="sm" className="flex-1">
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Izin Susulan
-                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setLateSubmissionStudentId(student.id)}>
+                                        <BookPlus className="mr-2 h-4 w-4" />
+                                        Izin Susulan
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Jenis Pengajuan Izin Susulan</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Pilih jenis pengajuan yang sesuai. Ini akan menentukan langkah Anda selanjutnya.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <div className="py-4">
+                                        <RadioGroup defaultValue="new-late" onValueChange={(value: 'new-late' | 'extend-late') => setLateSubmissionType(value)}>
+                                            <div className="flex items-start space-x-4 rounded-md border p-4">
+                                                <RadioGroupItem value="extend-late" id="r1" />
+                                                <Label htmlFor="r1" className="flex flex-col space-y-1">
+                                                    <span className="font-bold">Perpanjangan dari Izin Sebelumnya</span>
+                                                    <span className="text-sm font-normal text-muted-foreground">Pilih ini jika Anda ingin memperpanjang izin yang baru saja selesai.</span>
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-start space-x-4 rounded-md border p-4">
+                                                <RadioGroupItem value="new-late" id="r2" />
+                                                <Label htmlFor="r2" className="flex flex-col space-y-1">
+                                                   <span className="font-bold">Izin Baru yang Terlambat Diajukan</span>
+                                                   <span className="text-sm font-normal text-muted-foreground">Pilih ini untuk membuat pengajuan izin baru untuk tanggal yang sudah lewat.</span>
+                                                </Label>
+                                            </div>
+                                        </RadioGroup>
+                                    </div>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleLateSubmissionContinue}>Lanjutkan</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                           </>
                         )}
                       </>
@@ -765,3 +810,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
