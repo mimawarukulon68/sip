@@ -42,9 +42,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus } from "lucide-react";
+import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus, HelpCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore, subDays } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -115,6 +115,12 @@ export default function ParentDashboardPage() {
   const [lateSubmissionType, setLateSubmissionType] = React.useState<'extend-late' | 'new-late'>('new-late');
   const [lateSubmissionStudentId, setLateSubmissionStudentId] = React.useState<string | null>(null);
   
+  const [showExtensionDialog, setShowExtensionDialog] = React.useState(false);
+  const [extensionDialogData, setExtensionDialogData] = React.useState<{student: StudentData, leave: LeaveRequest} | null>(null);
+
+  const [showExtensionConfirmDialog, setShowExtensionConfirmDialog] = React.useState(false);
+  const [extensionConfirmData, setExtensionConfirmData] = React.useState<{studentId: string, leaveId: string} | null>(null);
+
   // Derived state for filtering dropdowns
   const availableYears = React.useMemo(() => {
     const years = new Set(allAcademicPeriods.map(p => p.academic_year));
@@ -306,7 +312,7 @@ export default function ParentDashboardPage() {
       today.setHours(0,0,0,0);
       const { error } = await supabase
         .from('leave_requests')
-        .update({ status: 'SELESAI', end_date: format(today, 'yyyy-MM-dd') })
+        .update({ status: 'SELESAI', end_date: format(subDays(today,1), 'yyyy-MM-dd') })
         .eq('id', leaveToComplete.id);
 
       if (error) throw error;
@@ -348,6 +354,30 @@ export default function ParentDashboardPage() {
       }
       return currentLeave;
   };
+  
+  const handleExtensionDialogAction = (action: 'extend' | 'new') => {
+      if (!extensionDialogData) return;
+      
+      if (action === 'extend') {
+          router.push(`/dashboard/izin?studentId=${extensionDialogData.student.id}&extend=${extensionDialogData.leave.id}`);
+      } else {
+          router.push(`/dashboard/izin?studentId=${extensionDialogData.student.id}`);
+      }
+      setShowExtensionDialog(false);
+  }
+  
+  const handleAjukanIzinClick = (student: StudentData) => {
+      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+      const extendableLeave = student.leave_requests.find(lr => lr.status === 'SELESAI' && lr.end_date === yesterday);
+
+      if (extendableLeave) {
+          setExtensionDialogData({ student, leave: extendableLeave });
+          setShowExtensionDialog(true);
+      } else {
+          router.push(`/dashboard/izin?studentId=${student.id}`);
+      }
+  }
+
 
   if (loading) {
     return (
@@ -544,8 +574,8 @@ export default function ParentDashboardPage() {
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
               
-              const canExtend = finalActiveLeave ? isToday(parseISO(finalActiveLeave.end_date)) || isPast(parseISO(finalActiveLeave.end_date)) : false;
-              const canComplete = finalActiveLeave && totalDuration > 1 && isAfter(startOfToday(), parseISO(combinedStartDate));
+              const canExtend = !!finalActiveLeave;
+              const canComplete = finalActiveLeave && isAfter(startOfToday(), parseISO(combinedStartDate)) && !isToday(parseISO(combinedStartDate));
               const canCancel = !!finalActiveLeave;
               
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
@@ -673,10 +703,13 @@ export default function ParentDashboardPage() {
                     {finalActiveLeave ? (
                      <>
                         {canExtend && isCurrentPeriodActive && (
-                            <Button variant="outline" size="sm" className="w-full flex-1" onClick={() => router.push(`/dashboard/izin?studentId=${student.id}&extend=${finalActiveLeave.id}`)}>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Perpanjang
-                            </Button>
+                           <Button variant="outline" size="sm" className="w-full flex-1" onClick={() => {
+                              setExtensionConfirmData({ studentId: student.id, leaveId: finalActiveLeave.id });
+                              setShowExtensionConfirmDialog(true);
+                           }}>
+                               <RefreshCw className="mr-2 h-4 w-4" />
+                               Perpanjang
+                           </Button>
                         )}
                         {canComplete && (
                             <Button size="sm" className="flex-1" onClick={() => setLeaveToComplete(finalActiveLeave)}>
@@ -695,12 +728,10 @@ export default function ParentDashboardPage() {
                       <>
                         {isCurrentPeriodActive && (
                           <>
-                            <Link href={`/dashboard/izin?studentId=${student.id}`} className="flex-1">
-                                <Button size="sm" className="w-full">
+                            <Button size="sm" className="flex-1" onClick={() => handleAjukanIzinClick(student)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Ajukan Izin
-                                </Button>
-                            </Link>
+                            </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" size="sm" className="flex-1" onClick={() => setLateSubmissionStudentId(student.id)}>
@@ -790,7 +821,7 @@ export default function ParentDashboardPage() {
                     </div>
                     <AlertDialogTitle className="text-lg">Konfirmasi Siswa Sudah Masuk?</AlertDialogTitle>
                     <AlertDialogDescription className="pt-2">
-                        Aksi ini akan mengubah status izin dari <b>AKTIF</b> menjadi <b>SELESAI</b>. Tanggal akhir izin akan disesuaikan menjadi hari ini.
+                        Aksi ini akan mengubah status izin dari <b>AKTIF</b> menjadi <b>SELESAI</b>. Tanggal akhir izin akan disesuaikan menjadi hari kemarin.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
@@ -804,6 +835,59 @@ export default function ParentDashboardPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <AlertDialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <HelpCircle className="h-6 w-6 text-primary"/>
+                      Izin Baru Saja Berakhir?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Kami melihat izin <strong>{extensionDialogData?.leave.leave_type}</strong> untuk <strong>{extensionDialogData?.student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="sm:justify-between pt-4">
+                     <AlertDialogCancel onClick={() => setShowExtensionDialog(false)}>
+                        Batal
+                     </AlertDialogCancel>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={() => handleExtensionDialogAction('new')}>
+                            Buat Izin Baru
+                        </Button>
+                        <AlertDialogAction onClick={() => handleExtensionDialogAction('extend')}>
+                            Ya, Perpanjang Izin
+                        </AlertDialogAction>
+                    </div>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showExtensionConfirmDialog} onOpenChange={setShowExtensionConfirmDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <RefreshCw className="h-6 w-6 text-primary"/>
+                      Konfirmasi Perpanjangan Izin
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                       Anda akan memperpanjang izin yang sedang aktif. Anda akan diarahkan ke formulir perpanjangan. Lanjutkan?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="pt-4">
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => {
+                        if (extensionConfirmData) {
+                            router.push(`/dashboard/izin?studentId=${extensionConfirmData.studentId}&extend=${extensionConfirmData.leaveId}`);
+                        }
+                        setShowExtensionConfirmDialog(false);
+                    }}>
+                        Lanjutkan
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
       </main>
     </div>
   );

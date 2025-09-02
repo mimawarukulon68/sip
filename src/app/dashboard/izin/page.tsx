@@ -31,16 +31,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -102,8 +92,6 @@ export default function PermissionFormPage() {
   
   const [isExtensionMode, setIsExtensionMode] = React.useState(false);
   const [originalLeave, setOriginalLeave] = React.useState<LeaveRequest | null>(null);
-  const [showExtendDialog, setShowExtendDialog] = React.useState(false);
-  const [extendableLeave, setExtendableLeave] = React.useState<LeaveRequest | null>(null);
   const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -139,28 +127,13 @@ export default function PermissionFormPage() {
         const extendPromise = extendLeaveId
           ? supabase.from('leave_requests').select('id, leave_type, start_date, end_date').eq('id', extendLeaveId).single()
           : Promise.resolve({ data: null, error: null });
-        
-        const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-        const suggestPromise = !extendLeaveId 
-          ? supabase
-            .from('leave_requests')
-            .select('id, leave_type, start_date, end_date')
-            .eq('student_id', studentId)
-            .eq('end_date', yesterday)
-            .eq('status', 'SELESAI')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-          : Promise.resolve({ data: null, error: null });
 
         const [
           { data: studentData, error: studentError },
           { data: extendData, error: extendError },
-          { data: suggestData, error: suggestError }
         ] = await Promise.all([
           studentPromise,
           extendPromise,
-          suggestPromise
         ]);
 
         if (studentError || !studentData) {
@@ -199,10 +172,6 @@ export default function PermissionFormPage() {
                 startDate: new Date(),
                 reasonText: "",
             });
-            if (suggestData) {
-                setExtendableLeave(suggestData as LeaveRequest);
-                setShowExtendDialog(true);
-            }
         }
 
         setLoading(false);
@@ -349,15 +318,6 @@ export default function PermissionFormPage() {
     }
   }
 
-  const handleExtendDialogAction = (action: 'extend' | 'new' | 'cancel') => {
-    setShowExtendDialog(false);
-    if (action === 'extend' && extendableLeave) {
-        router.push(`/dashboard/izin?studentId=${student?.id}&extend=${extendableLeave.id}`);
-    } else if (action === 'cancel') {
-        router.push('/dashboard');
-    }
-    // If 'new', do nothing, just close the dialog.
-  };
 
   if (loading) {
     return (
@@ -402,30 +362,6 @@ export default function PermissionFormPage() {
 
   return (
     <>
-    <AlertDialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Izin Baru Saja Berakhir?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Kami melihat izin <strong>{extendableLeave?.leave_type}</strong> untuk <strong>{student.full_name}</strong> baru saja berakhir kemarin. Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="sm:justify-between">
-                 <Button variant="outline" onClick={() => handleExtendDialogAction('cancel')}>
-                    Batal
-                 </Button>
-                <div className="flex gap-2">
-                    <Button variant="secondary" onClick={() => handleExtendDialogAction('new')}>
-                        Buat Izin Baru
-                    </Button>
-                    <AlertDialogAction onClick={() => handleExtendDialogAction('extend')}>
-                        Ya, Perpanjang Izin
-                    </AlertDialogAction>
-                </div>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-
     <div className="flex min-h-screen w-full flex-col bg-muted/10">
        <header className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
