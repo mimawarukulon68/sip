@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw, CircleCheckBig, CircleX, Calendar, History, FileSignature, User, LogOut, CalendarRange, Loader2, AlertTriangle, Thermometer, FileText, Archive, BookPlus, HelpCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore, subDays } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, isWithinInterval, addDays, isPast, isToday, isAfter, startOfToday, isBefore, subDays, isSameDay } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -372,8 +372,13 @@ export default function ParentDashboardPage() {
   }
   
   const handleAjukanIzinClick = (student: StudentData) => {
-      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-      const extendableLeave = student.leave_requests.find(lr => lr.status === 'SELESAI' && lr.end_date === yesterday);
+      const yesterday = subDays(startOfToday(), 1);
+      const extendableLeave = student.leave_requests.find(lr => {
+          if (lr.status !== 'SELESAI') return false;
+          const endDate = parseISO(lr.end_date);
+          return isSameDay(endDate, yesterday);
+      });
+
 
       if (extendableLeave) {
           setExtensionDialogData({ student, leave: extendableLeave });
@@ -579,10 +584,13 @@ export default function ParentDashboardPage() {
               const finalEndDate = finalActiveLeave ? parseISO(finalActiveLeave.end_date) : null;
               const totalDuration = finalActiveLeave && combinedStartDate ? differenceInCalendarDays(finalEndDate!, parseISO(combinedStartDate)) + 1 : 0;
               
-              const canExtend = !!finalActiveLeave;
-              const canComplete = finalActiveLeave && isAfter(startOfToday(), parseISO(combinedStartDate as string));
               const canCancel = !!finalActiveLeave;
-              
+              const isTodayLastDayOfLeave = finalActiveLeave ? isSameDay(startOfToday(), parseISO(finalActiveLeave.end_date)) : false;
+              const canExtend = canCancel && isTodayLastDayOfLeave;
+
+              const isSingleDayLeave = finalActiveLeave ? isSameDay(parseISO(finalActiveLeave.start_date), parseISO(finalActiveLeave.end_date)) : false;
+              const canComplete = finalActiveLeave && !isSingleDayLeave && isAfter(startOfToday(), parseISO(combinedStartDate as string));
+
               const isCurrentPeriodActive = currentAcademicPeriod?.id === selectedPeriodId;
 
 
@@ -853,7 +861,7 @@ export default function ParentDashboardPage() {
                         Apakah Anda ingin memperpanjang izin tersebut atau membuat pengajuan baru?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                <AlertDialogFooter className="flex-col sm:flex-row sm:justify-end gap-2 pt-4">
                     <AlertDialogCancel onClick={() => setShowExtensionDialog(false)}>
                         Batal
                     </AlertDialogCancel>
@@ -868,7 +876,7 @@ export default function ParentDashboardPage() {
         </AlertDialog>
 
         <AlertDialog open={showExtensionConfirmDialog} onOpenChange={setShowExtensionConfirmDialog}>
-            <AlertDialogContent className="max-w-md">
+            <AlertDialogContent className="max-w-sm">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-3">
                       <RefreshCw className="h-6 w-6 text-primary"/>
@@ -896,5 +904,3 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
-
-    
