@@ -542,19 +542,29 @@ export default function ParentDashboardPage() {
                   return isWithinInterval(leaveStartDate, periodInterval);
               }) : [];
 
-              const activeLeaves = periodRequests.filter(lr => lr.status === 'AKTIF');
-              const activeLeaveRoots = activeLeaves.filter(lr => !lr.parent_leave_id);
-
+              const activeLeave = periodRequests.find(lr => lr.status === 'AKTIF');
               let finalActiveLeave: LeaveRequest | undefined = undefined;
               let fullLeaveChain: LeaveRequest[] = [];
               let combinedStartDate: string | undefined;
-              
-              if(activeLeaveRoots.length > 0) {
-                  const root = activeLeaveRoots[0];
-                  const lastLeaveInChain = findLastLeaveInChain(root, periodRequests);
-                  finalActiveLeave = lastLeaveInChain;
+
+              if (activeLeave) {
+                  let currentLeave = activeLeave;
+                  // Traverse up to find the root of the chain
+                  while (currentLeave.parent_leave_id) {
+                      const parent = periodRequests.find(lr => lr.id === currentLeave.parent_leave_id);
+                      if (parent) {
+                          currentLeave = parent;
+                      } else {
+                          break; // Should not happen in consistent data
+                      }
+                  }
+                  const rootLeave = currentLeave;
                   
-                  let current = lastLeaveInChain;
+                  // Now, find the last leave in this specific chain
+                  finalActiveLeave = findLastLeaveInChain(rootLeave, periodRequests);
+
+                  // Reconstruct the full chain from the identified root
+                  let current = finalActiveLeave;
                   fullLeaveChain.unshift(current);
                   while(current.parent_leave_id){
                       const parent = periodRequests.find(lr => lr.id === current.parent_leave_id);
@@ -905,3 +915,5 @@ export default function ParentDashboardPage() {
     </div>
   );
 }
+
+    
