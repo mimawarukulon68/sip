@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { School, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { School, Lock, User, Eye, EyeOff } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { isPhoneNumber } from "@/lib/phone-utils";
+import { findEmailByPhoneNumber } from "@/lib/phone-lookup";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Alamat email tidak valid." }),
+  emailOrPhone: z.string().min(1, { message: "Email atau nomor telepon tidak boleh kosong." })
+    .refine((value) => {
+      // Check if it's a valid email or phone number
+      const isEmail = z.string().email().safeParse(value).success;
+      const isPhone = isPhoneNumber(value);
+      return isEmail || isPhone;
+    }, { message: "Masukkan email atau nomor telepon yang valid." }),
   password: z.string().min(1, { message: "Password tidak boleh kosong." }),
   remember: z.boolean().default(false).optional(),
 });
@@ -48,7 +56,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      emailOrPhone: "",
       password: "",
       remember: false,
     },
@@ -58,9 +66,44 @@ export function LoginForm() {
     setIsLoading(true);
     setLoginError(null);
 
+    let emailToUse = values.emailOrPhone;
+
+    // Check if input is phone number
+    if (isPhoneNumber(values.emailOrPhone)) {
+      try {
+        const foundEmail = await findEmailByPhoneNumber(values.emailOrPhone);
+
+        if (!foundEmail) {
+          setIsLoading(false);
+          setLoginError("Nomor telepon tidak terdaftar.");
+          toast({
+            variant: "destructive",
+            title: "Login Gagal",
+            description: "Nomor telepon tidak terdaftar dalam sistem.",
+          });
+          return;
+        }
+
+        emailToUse = foundEmail;
+      } catch (lookupError) {
+        setIsLoading(false);
+        setLoginError("Terjadi kesalahan saat mencari data pengguna.");
+        toast({
+          variant: "destructive",
+          title: "Login Gagal",
+          description: "Terjadi kesalahan sistem. Silakan coba lagi.",
+        });
+        return;
+      }
+    }
+
+    // Proceed with Supabase authentication using email with remember me option
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: values.email,
+      email: emailToUse,
       password: values.password,
+      options: {
+        persistSession: values.remember, // Use remember me checkbox value
+      }
     });
 
     setIsLoading(false);
@@ -70,7 +113,7 @@ export function LoginForm() {
        toast({
         variant: "destructive",
         title: "Login Gagal",
-        description: "Email atau password yang Anda masukkan salah.",
+        description: "Email/nomor telepon atau password yang Anda masukkan salah.",
       });
       return;
     }
@@ -112,15 +155,15 @@ export function LoginForm() {
             <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="emailOrPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email / Nomor Telepon</FormLabel>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <FormControl>
                         <Input
-                          placeholder="Email"
+                          placeholder="Email atau nomor telepon"
                           {...field}
                           className="pl-10"
                         />
