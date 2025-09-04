@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,6 @@ import {
   Archive,
   Clock,
   FileText,
-  RefreshCw,
   Link2,
   ExternalLink,
   User,
@@ -68,16 +67,6 @@ type Student = {
     } | null;
 };
 
-type LeaveRequestChain = {
-    root: LeaveRequest;
-    extensions: LeaveRequest[];
-    total_duration: number;
-    final_end_date: string;
-    final_status: 'AKTIF' | 'SELESAI';
-    document_url: string | null;
-    submitter_name: string | null;
-}
-
 export default function StudentHistoryPage() {
   const params = useParams();
   const studentId = params.studentId as string;
@@ -100,13 +89,7 @@ export default function StudentHistoryPage() {
         setLoading(true);
         const studentPromise = supabase
             .from('students')
-            .select(`
-                id,
-                full_name,
-                classes (
-                    class_name
-                )
-            `)
+            .select(`id, full_name, classes (class_name)`)
             .eq('id', studentId)
             .single();
 
@@ -114,7 +97,7 @@ export default function StudentHistoryPage() {
             .from('leave_requests')
             .select(`*`)
             .eq('student_id', studentId)
-            .order('start_date', { ascending: true });
+            .order('start_date', { ascending: false }); // Order by newest first
 
         const [{ data: studentData, error: studentError }, { data: requestsData, error: requestsError }] = await Promise.all([
             studentPromise,
@@ -149,57 +132,17 @@ export default function StudentHistoryPage() {
   }, [studentId]);
 
 
-  const leaveRequestChains = leaveRequests
-    .filter(req => !req.parent_leave_id) // Hanya mulai dari izin induk
-    .map(root => {
-        const chain: LeaveRequestChain = {
-            root: root,
-            extensions: [],
-            total_duration: 0,
-            final_end_date: root.end_date,
-            final_status: root.status,
-            document_url: root.document_url,
-            submitter_name: parentProfiles.get(root.created_by_user_id) || 'N/A',
-        };
+  const getParentLeave = (parentId: string | null) => {
+    if (!parentId) return null;
+    return leaveRequests.find(req => req.id === parentId);
+  }
 
-        let currentLeave = root;
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            const nextLeave = leaveRequests.find(req => req.parent_leave_id === currentLeave.id);
-            if (nextLeave) {
-                chain.extensions.push(nextLeave);
-                if (nextLeave.document_url) { // Check if extension has a doc
-                    chain.document_url = nextLeave.document_url;
-                }
-                currentLeave = nextLeave;
-            } else {
-                break;
-            }
-        }
-        
-        const allInChain = [chain.root, ...chain.extensions];
-        chain.total_duration = differenceInCalendarDays(parseISO(allInChain[allInChain.length - 1].end_date), parseISO(chain.root.start_date)) + 1;
-        chain.final_end_date = allInChain[allInChain.length - 1].end_date;
-        chain.final_status = allInChain[allInChain.length-1].status;
-        
-        // Find any document in the chain
-        chain.document_url = allInChain.find(req => req.document_url)?.document_url || null;
-
-        return chain;
-    })
-    .sort((a,b) => parseISO(b.root.start_date).getTime() - parseISO(a.root.start_date).getTime());
-
-
-  const filteredChains = leaveRequestChains.filter(chain => {
-    const allReasons = [chain.root.reason, ...chain.extensions.map(ext => ext.reason)].join(' ').toLowerCase();
-    const matchesSearch = chain.root.leave_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         allReasons.includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === "all" || chain.final_status.toUpperCase() === filterStatus.toUpperCase();
-    const matchesType = filterType === "all" || chain.root.leave_type.toUpperCase() === filterType.toUpperCase();
-
+  const filteredRequests = useMemo(() => leaveRequests.filter(request => {
+    const matchesSearch = !searchTerm || (request.reason && request.reason.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = filterStatus === "all" || request.status.toUpperCase() === filterStatus.toUpperCase();
+    const matchesType = filterType === "all" || request.leave_type.toUpperCase() === filterType.toUpperCase();
     return matchesSearch && matchesStatus && matchesType;
-  });
+  }), [leaveRequests, searchTerm, filterStatus, filterType]);
   
   if (loading) {
      return (
@@ -239,15 +182,14 @@ export default function StudentHistoryPage() {
     );
   }
   
-  const validRequests = leaveRequests.filter(r => r.status === 'AKTIF' || r.status === 'SELESAI');
-  const sickRequests = validRequests.filter(r => r.leave_type === 'Sakit');
-  const permitRequests = validRequests.filter(r => r.leave_type === 'Izin');
-  const activeRequests = leaveRequestChains.filter(r => r.final_status === 'AKTIF').length;
-  const completedRequests = leaveRequestChains.filter(r => r.final_status === 'SELESAI').length;
+  const totalSubmissions = leaveRequests.length;
+  const sickSubmissions = leaveRequests.filter(r => r.leave_type === 'Sakit').length;
+  const permitSubmissions = leaveRequests.filter(r => r.leave_type === 'Izin').length;
+  const activeSubmissions = leaveRequests.filter(r => r.status === 'AKTIF').length;
+  const completedSubmissions = leaveRequests.filter(r => r.status === 'SELESAI').length;
 
-  const totalSickDays = sickRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
-  const totalPermitDays = permitRequests.reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
-  const totalValidDays = totalSickDays + totalPermitDays;
+  const totalSickDays = leaveRequests.filter(r => r.leave_type === 'Sakit').reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
+  const totalPermitDays = leaveRequests.filter(r => r.leave_type === 'Izin').reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO_curr.start_date)) + 1, 0);
 
   return (
     <div className="min-h-screen w-full flex-col bg-muted/10">
@@ -288,13 +230,21 @@ export default function StudentHistoryPage() {
               </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
+                  <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
+                      <Archive className="w-4 h-4" />
+                      <span className="font-medium">Total Pengajuan</span>
+                  </div>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{totalSubmissions} kali</p>
+              </div>
+
                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                       <div className="flex items-center justify-center text-red-800 text-sm gap-2">
                           <Thermometer className="w-4 h-4" />
                           <span className="font-medium">Sakit</span>
                       </div>
-                      <p className="text-xl font-bold text-red-900 mt-1">{sickRequests.length} kali</p>
+                      <p className="text-lg font-bold text-red-900 mt-1">{sickSubmissions} kali</p>
                       <p className="text-xs text-red-700">{totalSickDays} hari</p>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
@@ -302,17 +252,9 @@ export default function StudentHistoryPage() {
                           <ClipboardList className="w-4 h-4" />
                           <span className="font-medium">Izin</span>
                       </div>
-                      <p className="text-xl font-bold text-blue-900 mt-1">{permitRequests.length} kali</p>
+                      <p className="text-lg font-bold text-blue-900 mt-1">{permitSubmissions} kali</p>
                       <p className="text-xs text-blue-700">{totalPermitDays} hari</p>
                   </div>
-              </div>
-              
-              <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-center">
-                  <div className="flex items-center justify-center text-slate-800 text-sm gap-2">
-                      <Archive className="w-4 h-4" />
-                      <span className="font-medium">Total Perizinan Siswa</span>
-                  </div>
-                    <p className="text-xl font-bold text-slate-900 mt-1">{validRequests.length} kali ({totalValidDays} hari)</p>
               </div>
               
               <hr className="my-4"/>
@@ -323,14 +265,14 @@ export default function StudentHistoryPage() {
                             <CheckCircle className="w-4 h-4" />
                             <span className="font-semibold">Selesai</span>
                       </div>
-                      <p className="font-bold text-base mt-1">{completedRequests}</p>
+                      <p className="font-bold text-base mt-1">{completedSubmissions}</p>
                   </div>
                   <div>
                       <div className="flex items-center justify-center gap-2 text-yellow-700">
                             <Clock className="w-4 h-4" />
                             <span className="font-semibold">Aktif</span>
                       </div>
-                      <p className="font-bold text-base mt-1">{activeRequests}</p>
+                      <p className="font-bold text-base mt-1">{activeSubmissions}</p>
                   </div>
               </div>
           </CardContent>
@@ -387,13 +329,13 @@ export default function StudentHistoryPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center">
               <History className="w-5 h-5 mr-2" />
-              Detail Riwayat
+              Detail Riwayat Pengajuan
             </h2>
             <Badge variant="outline">
-              Menampilkan {filteredChains.length} hasil
+              Menampilkan {filteredRequests.length} hasil
             </Badge>
           </div>
-          {filteredChains.length === 0 ? (
+          {filteredRequests.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground bg-white rounded-lg border">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>
@@ -405,79 +347,63 @@ export default function StudentHistoryPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredChains.map((chain) => {
-                const isExtended = chain.extensions.length > 0;
-                const isSakit = chain.root.leave_type === 'Sakit';
-                const allInChain = [chain.root, ...chain.extensions];
+              {filteredRequests.map((request) => {
+                const isExtension = !!request.parent_leave_id;
+                const parentLeave = getParentLeave(request.parent_leave_id);
+                const isSakit = request.leave_type === 'Sakit';
+                const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <Dialog key={chain.root.id}>
-                    <Card className="overflow-hidden">
+                  <Dialog key={request.id}>
+                    <Card className={cn("overflow-hidden", isExtension && "border-l-4 border-amber-300")}>
                         <CardHeader className="p-4 bg-slate-50/70 border-b">
                             <div className="flex justify-between items-start">
                                 <div>
                                     <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
                                         <Badge variant={isSakit ? "destructive" : "secondary"} className="text-base">
                                           {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
-                                          {chain.root.leave_type}
+                                          {request.leave_type}
                                         </Badge>
-                                        {isExtended && (
+                                        {isExtension && (
                                             <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                                                 <Link2 className="h-3 w-3 mr-1.5" />
-                                                Diperpanjang
+                                                Perpanjangan
                                             </Badge>
                                         )}
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        {format(parseISO(chain.root.start_date), "d MMM", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })}
-                                        <span className="ml-2 font-medium">({chain.total_duration} hari)</span>
+                                        {format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}
+                                        <span className="ml-2 font-medium">({duration} hari)</span>
                                     </p>
                                 </div>
                                 <Badge
                                     variant="outline"
                                     className={cn(
                                         "capitalize",
-                                        chain.final_status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                        request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
                                     )}
                                 >
-                                    <Clock className={cn("h-3 w-3 mr-1.5", chain.final_status === 'SELESAI' && 'hidden')} />
-                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", chain.final_status === 'AKTIF' && 'hidden')} />
-                                    {chain.final_status.toLowerCase()}
+                                    <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
+                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
+                                    {request.status.toLowerCase()}
                                 </Badge>
                             </div>
                         </CardHeader>
                         <CardContent className="p-4 text-sm">
-                            <div className="space-y-1">
-                                {allInChain.map((request, index) => {
-                                    const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                                    const isFirst = index === 0;
-
-                                    return (
-                                        <div key={request.id} className={cn("flex items-start gap-4 p-3 rounded-lg border-l-4", isFirst ? (isSakit ? 'border-red-200' : 'border-blue-200') : 'border-amber-200' )}>
-                                             <div className="w-5 pt-0.5 flex-shrink-0">
-                                                {isFirst ? (
-                                                     <p className="text-xs font-semibold text-gray-500 w-full text-center">Awal</p>
-                                                ) : (
-                                                    <RefreshCw className="h-5 w-5 text-amber-500"/>
-                                                )}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="italic">
-                                                    "{request.reason || (isFirst ? "Tidak ada alasan" : "Alasan tidak disebutkan")}"
-                                                </p>
-                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                    {format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}
-                                                </p>
-                                            </div>
-                                            <Badge variant="outline" className="font-normal">{duration} hari</Badge>
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                           {isExtension && parentLeave && (
+                             <div className="mb-3 text-xs p-2 bg-amber-50 border border-amber-200 rounded-md">
+                                Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
+                             </div>
+                           )}
+                           <p className="italic">
+                            "{request.reason || "Tidak ada alasan yang diberikan."}"
+                           </p>
                         </CardContent>
-                        <CardFooter className="p-4 border-t bg-slate-50/70">
+                        <CardFooter className="p-4 border-t bg-slate-50/70 flex justify-between items-center">
+                            <p className="text-xs text-muted-foreground">Diajukan oleh: <strong>{submitterName}</strong></p>
                             <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full">
+                                <Button variant="outline" size="sm">
                                     Lihat Detail
                                 </Button>
                             </DialogTrigger>
@@ -486,7 +412,7 @@ export default function StudentHistoryPage() {
                      <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                Detail Izin: {chain.root.leave_type}
+                                Detail Pengajuan: {request.leave_type}
                             </DialogTitle>
                             <DialogDescription>
                                 {student.full_name} - {student.classes?.class_name}
@@ -500,41 +426,33 @@ export default function StudentHistoryPage() {
                                     variant="outline"
                                     className={cn(
                                         "capitalize",
-                                        chain.final_status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                        request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
                                     )}
                                 >
-                                    {chain.final_status.toLowerCase()}
+                                    {request.status.toLowerCase()}
                                 </Badge>
                                </div>
                             </div>
                              <div className="grid grid-cols-3 items-center gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Periode</div>
-                               <div className="col-span-2 font-medium">{format(parseISO(chain.root.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(chain.final_end_date), "d MMM yyyy", { locale: id })} ({chain.total_duration} hari)</div>
+                               <div className="col-span-2 font-medium">{format(parseISO(request.start_date), "EEEE, d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "EEEE, d MMM yyyy", { locale: id })} ({duration} hari)</div>
                             </div>
                             <div className="grid grid-cols-3 items-center gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
-                               <div className="col-span-2 font-medium">{chain.submitter_name}</div>
+                               <div className="col-span-2 font-medium">{submitterName}</div>
                             </div>
-                             <div className="grid grid-cols-3 items-start gap-4 pt-4 border-t">
-                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><ListRestart className="h-4 w-4"/>Kronologi</div>
-                                <div className="col-span-2 space-y-2">
-                                     {allInChain.map((request, index) => (
-                                        <div key={request.id} className={cn("flex items-start gap-2 text-xs p-2 rounded-md", index === 0 ? 'bg-slate-50' : 'bg-amber-50')}>
-                                            <div className="w-5 pt-0.5 flex-shrink-0">
-                                                {index === 0 ? (
-                                                    isSakit ? <Thermometer className="h-4 w-4 text-red-600"/> : <ClipboardList className="h-4 w-4 text-blue-600"/>
-                                                ) : (
-                                                    <RefreshCw className="h-4 w-4 text-amber-600"/>
-                                                )}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-semibold">{index === 0 ? 'Izin Awal' : `Perpanjangan ${index}`}</p>
-                                                <p className="italic text-muted-foreground">"{request.reason || "Tidak ada alasan"}"</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <div className="grid grid-cols-3 items-start gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
+                               <div className="col-span-2 font-medium italic bg-slate-50 p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
+                            </div>
+                             {isExtension && parentLeave && (
+                                <div className="grid grid-cols-3 items-start gap-4 border-t pt-4">
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><Link2 className="h-4 w-4"/>Terhubung ke</div>
+                                   <div className="col-span-2 font-medium text-xs bg-amber-50 p-2 rounded-md border border-amber-200">
+                                     Izin {parentLeave.leave_type} ({format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM")})
+                                   </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                         <DialogFooter className="sm:justify-between gap-2">
                              <DialogClose asChild>
@@ -544,9 +462,9 @@ export default function StudentHistoryPage() {
                             </DialogClose>
                             <Button
                                 asChild
-                                disabled={!chain.document_url}
+                                disabled={!request.document_url}
                             >
-                                <a href={chain.document_url || '#'} target="_blank" rel="noopener noreferrer">
+                                <a href={request.document_url || '#'} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="mr-2 h-4 w-4"/>
                                     Lihat Dokumen Pendukung
                                 </a>
