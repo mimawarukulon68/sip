@@ -189,7 +189,7 @@ export default function StudentHistoryPage() {
   const completedSubmissions = leaveRequests.filter(r => r.status === 'SELESAI').length;
 
   const totalSickDays = leaveRequests.filter(r => r.leave_type === 'Sakit').reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
-  const totalPermitDays = leaveRequests.filter(r => r.leave_type === 'Izin').reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO_curr.start_date)) + 1, 0);
+  const totalPermitDays = leaveRequests.filter(r => r.leave_type === 'Izin').reduce((acc, curr) => acc + differenceInCalendarDays(parseISO(curr.end_date), parseISO(curr.start_date)) + 1, 0);
 
   return (
     <div className="min-h-screen w-full flex-col bg-muted/10">
