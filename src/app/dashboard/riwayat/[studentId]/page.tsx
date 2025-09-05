@@ -107,6 +107,7 @@ export default function StudentHistoryPage() {
             const processedRequests: LeaveRequest[] = [];
             const chains = new Map<string, LeaveRequest[]>();
 
+            // Group requests by their root parent
             rawRequestsData.forEach(req => {
                 let rootId = req.id;
                 let current = req;
@@ -123,6 +124,7 @@ export default function StudentHistoryPage() {
                 chains.get(rootId)!.push(req as LeaveRequest);
             });
 
+            // Process each chain to assign chain_index
             chains.forEach(chain => {
                 const sortedChain = chain.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
                 sortedChain.forEach((req, index) => {
@@ -130,6 +132,7 @@ export default function StudentHistoryPage() {
                 });
             });
 
+            // Sort all requests by creation date for final display
             setLeaveRequests(processedRequests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
         }
 
@@ -169,6 +172,7 @@ export default function StudentHistoryPage() {
 
   const getParentLeave = (parentId: string | null) => {
     if (!parentId) return null;
+    // We search the original raw array, not the processed one to avoid chain_index issues
     return leaveRequests.find(req => req.id === parentId);
   }
 
@@ -314,8 +318,8 @@ export default function StudentHistoryPage() {
               </div>
           </CardContent>
         </Card>
-
-        <div className="w-full space-y-2">
+        
+        <div className="w-full space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
@@ -395,8 +399,8 @@ export default function StudentHistoryPage() {
                 const submitterRole = userRoles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <Card key={request.id} className="overflow-hidden rounded-lg">
-                    <AccordionItem value={request.id} className="border-b-0">
+                  <AccordionItem value={request.id} key={request.id} className="border-b-0">
+                    <Card className="overflow-hidden rounded-lg">
                         <AccordionTrigger className="p-3 hover:no-underline data-[state=open]:bg-slate-50">
                             <div className="flex flex-col items-start text-left flex-1 gap-2">
                                <div className="flex items-center gap-2 flex-wrap">
@@ -430,7 +434,7 @@ export default function StudentHistoryPage() {
                                 </Badge>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-3 border-t text-sm bg-slate-50">
+                        <AccordionContent className="p-3 border-t text-xs bg-slate-50">
                            {isExtension && parentLeave && (
                              <div className="mb-3 text-sm p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                                 Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
@@ -461,8 +465,8 @@ export default function StudentHistoryPage() {
                             </div>
                            )}
                         </AccordionContent>
-                      </AccordionItem>
-                  </Card>
+                      </Card>
+                  </AccordionItem>
                 )
               })}
             </Accordion>
