@@ -48,7 +48,7 @@ type LeaveRequest = {
     parent_leave_id: string | null;
     document_url: string | null;
     created_by_user_id: string;
-    parent_leave_index?: number;
+    chain_index?: number; // 0 for root, 1 for 1st extension, etc.
 };
 
 type ParentProfile = {
@@ -93,9 +93,9 @@ export default function StudentHistoryPage() {
             .from('leave_requests')
             .select(`*`)
             .eq('student_id', studentId)
-            .order('start_date', { ascending: false });
+            .order('start_date', { ascending: true }); // Fetch in ascending order to build chains correctly
 
-        const [{ data: studentData, error: studentError }, { data: requestsData, error: requestsError }] = await Promise.all([
+        const [{ data: studentData, error: studentError }, { data: rawRequestsData, error: requestsError }] = await Promise.all([
             studentPromise,
             requestsPromise
         ]);
@@ -105,37 +105,59 @@ export default function StudentHistoryPage() {
 
         setStudent(studentData as Student);
         
-        if (requestsData) {
-            const extensionMap = new Map<string, number>();
-            const processedRequests = requestsData.map(req => {
-                if (req.parent_leave_id) {
-                    const count = (extensionMap.get(req.parent_leave_id) || 0) + 1;
-                    extensionMap.set(req.parent_leave_id, count);
-                    // Find the root parent
-                    let rootId = req.parent_leave_id;
-                    let current = req;
-                    const allReqs = requestsData;
-                    while(current && current.parent_leave_id) {
-                        const parent = allReqs.find(r => r.id === current.parent_leave_id);
-                        if (parent) {
-                            rootId = parent.id;
-                            current = parent;
-                        } else {
-                            break;
-                        }
-                    }
-                     const siblings = allReqs.filter(r => r.parent_leave_id === rootId || r.id === rootId).sort((a,b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
-                     const myIndex = siblings.findIndex(r => r.id === req.id);
-                     return { ...req, parent_leave_index: myIndex };
+        if (rawRequestsData) {
+            // Group requests by their chain (root id)
+            const chains = new Map<string, LeaveRequest[]>();
+            
+            // Find root requests (no parent)
+            rawRequestsData.forEach(req => {
+                if (!req.parent_leave_id) {
+                    chains.set(req.id, []);
                 }
-                return req;
-            }).sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+            });
 
-            setLeaveRequests(processedRequests as LeaveRequest[]);
+            // Populate chains with all requests
+             rawRequestsData.forEach(req => {
+                let current = req;
+                let rootId = current.parent_leave_id;
+
+                // Traverse up to find the ultimate root ID
+                while (rootId) {
+                    const parent = rawRequestsData.find(r => r.id === rootId);
+                    if (parent && parent.parent_leave_id) {
+                        rootId = parent.parent_leave_id;
+                    } else if (parent) {
+                        rootId = parent.id;
+                        break;
+                    } else {
+                        rootId = null; // Should not happen with consistent data
+                    }
+                }
+                
+                if (rootId && chains.has(rootId)) {
+                    chains.get(rootId)!.push(req);
+                } else if (!req.parent_leave_id) {
+                    // This is a root request, add it to its own chain
+                    chains.get(req.id)!.unshift(req);
+                }
+            });
+
+
+            // Process chains to add index and flatten
+            const processedRequests: LeaveRequest[] = [];
+            chains.forEach(chain => {
+                // The first item is always the root
+                const sortedChain = chain.sort((a,b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+                sortedChain.forEach((req, index) => {
+                    processedRequests.push({ ...req, chain_index: index });
+                });
+            });
+
+            setLeaveRequests(processedRequests.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
         }
 
-        if(requestsData && requestsData.length > 0) {
-            const userIds = [...new Set(requestsData.map(req => req.created_by_user_id))];
+        if(rawRequestsData && rawRequestsData.length > 0) {
+            const userIds = [...new Set(rawRequestsData.map(req => req.created_by_user_id))];
             const { data: profiles, error: profilesError } = await supabase
                 .from('parent_profiles')
                 .select('user_id, full_name')
@@ -252,7 +274,7 @@ export default function StudentHistoryPage() {
           <CardHeader>
               <CardTitle className="flex items-center text-lg">
                 <BookUser className="w-5 h-5 mr-2" />
-                Ringkasan Perizinan
+                Ringkasan Pengajuan
               </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -304,16 +326,18 @@ export default function StudentHistoryPage() {
           </CardContent>
         </Card>
 
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
-              <Filter className="w-5 h-5 mr-2" />
-              Filter & Pencarian
+              <History className="w-5 h-5 mr-2" />
+              Detail Riwayat Pengajuan
             </CardTitle>
+            <CardDescription>
+              Cari atau filter riwayat pengajuan izin berdasarkan status atau jenis izin.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -348,21 +372,15 @@ export default function StudentHistoryPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="pt-2">
+                <Badge variant="outline">
+                    Menampilkan {filteredRequests.length} dari {totalSubmissions} hasil
+                </Badge>
+            </div>
           </CardContent>
-        </Card>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center">
-              <History className="w-5 h-5 mr-2" />
-              Detail Riwayat Pengajuan
-            </h2>
-            <Badge variant="outline">
-              Menampilkan {filteredRequests.length} hasil
-            </Badge>
-          </div>
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground bg-white rounded-lg border">
+            <div className="text-center py-16 text-muted-foreground border-t">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>
                 {leaveRequests.length === 0 
@@ -372,16 +390,16 @@ export default function StudentHistoryPage() {
               </p>
             </div>
           ) : (
-            <Accordion type="single" collapsible className="w-full space-y-2">
+            <Accordion type="single" collapsible className="w-full border-t">
               {filteredRequests.map((request) => {
-                const isExtension = !!request.parent_leave_id;
+                const isExtension = request.chain_index && request.chain_index > 0;
                 const parentLeave = getParentLeave(request.parent_leave_id);
                 const isSakit = request.leave_type === 'Sakit';
                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
                 const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <AccordionItem value={request.id} key={request.id} className={cn("bg-white rounded-lg shadow-sm border", isExtension && "border-amber-300")}>
+                  <AccordionItem value={request.id} key={request.id} className={cn("bg-white", isExtension && "bg-amber-50/50")}>
                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex flex-col items-start text-left flex-1 gap-2">
                            <div className="flex items-center gap-2 flex-wrap">
@@ -392,7 +410,7 @@ export default function StudentHistoryPage() {
                                 {isExtension && (
                                     <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                                         <Link2 className="h-3 w-3 mr-1.5" />
-                                        Perpanjangan {request.parent_leave_index || ''}
+                                        Perpanjangan {request.chain_index}
                                     </Badge>
                                 )}
                            </div>
@@ -415,16 +433,16 @@ export default function StudentHistoryPage() {
                             </Badge>
                         </div>
                     </AccordionTrigger>
-                    <AccordionContent className="p-4 border-t text-sm">
+                    <AccordionContent className="p-4 border-t text-sm bg-slate-50">
                        {isExtension && parentLeave && (
-                         <div className="mb-3 text-xs p-2 bg-amber-50 border border-amber-200 rounded-md">
+                         <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                             Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
                          </div>
                        )}
                        <div className="space-y-4 py-2">
                            <div className="grid grid-cols-3 items-start gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
-                               <div className="col-span-2 font-medium italic bg-slate-50 p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
+                               <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
                            </div>
                            <div className="grid grid-cols-3 items-center gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
@@ -435,21 +453,23 @@ export default function StudentHistoryPage() {
                                <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
                            </div>
                        </div>
-                       <div className="mt-4 pt-4 border-t flex justify-end">
-                            <Button asChild disabled={!request.document_url} size="sm">
-                                <a href={request.document_url || '#'} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="mr-2 h-4 w-4"/>
-                                    Lihat Dokumen
-                                </a>
-                            </Button>
-                       </div>
+                       {request.document_url && (
+                        <div className="mt-4 pt-4 border-t flex justify-end">
+                              <Button asChild size="sm">
+                                  <a href={request.document_url} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="mr-2 h-4 w-4"/>
+                                      Lihat Dokumen
+                                  </a>
+                              </Button>
+                        </div>
+                       )}
                     </AccordionContent>
                   </AccordionItem>
                 )
               })}
             </Accordion>
           )}
-        </div>
+        </Card>
       </main>
     </div>
   );
