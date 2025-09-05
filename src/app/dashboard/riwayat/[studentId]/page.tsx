@@ -108,14 +108,11 @@ export default function StudentHistoryPage() {
             const requestsById = new Map(rawRequestsData.map(req => [req.id, req as LeaveRequest]));
             const processedRequests: LeaveRequest[] = [];
             
-            // Create a map to hold chains of requests
             const chains = new Map<string, LeaveRequest[]>();
 
-            // First, populate the chains
             rawRequestsData.forEach(req => {
                 let rootId = req.id;
                 let current = req;
-                // Find the ultimate root of the current request
                 while (current.parent_leave_id) {
                     const parent = requestsById.get(current.parent_leave_id);
                     if (!parent) break;
@@ -129,7 +126,6 @@ export default function StudentHistoryPage() {
                 chains.get(rootId)!.push(req as LeaveRequest);
             });
 
-            // Process each chain to assign chain_index
             chains.forEach(chain => {
                 const sortedChain = chain.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
                 sortedChain.forEach((req, index) => {
@@ -193,6 +189,7 @@ export default function StudentHistoryPage() {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       toast({
+        variant: "default",
         title: 'Informasi',
         description: 'Tidak ada dokumen pendukung yang dilampirkan.',
       });
@@ -420,7 +417,7 @@ export default function StudentHistoryPage() {
                                       {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
                                       {request.leave_type}
                                     </Badge>
-                                    {isExtension && (
+                                    {request.chain_index !== undefined && request.chain_index > 0 && (
                                         <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                                             <Link2 className="h-3 w-3 mr-1.5" />
                                             Perpanjangan {request.chain_index}
@@ -455,18 +452,18 @@ export default function StudentHistoryPage() {
                            <div className="space-y-4 py-2">
                                <div className="grid grid-cols-3 items-start gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
-                                   <div className="col-span-2 font-medium italic bg-white p-2 rounded-md text-base">"{request.reason || "Tidak ada alasan"}"</div>
+                                   <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Dibuat oleh</div>
-                                   <div className="col-span-2 font-medium text-base">{submitterRole}</div>
+                                   <div className="col-span-2 font-medium">{submitterRole}</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Dibuat pada</div>
-                                   <div className="col-span-2 font-medium text-base">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
+                                   <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
                                </div>
                            </div>
-                            <div className="mt-4 pt-4 border-t flex justify-end">
+                            <div className="mt-4 pt-4 border-t flex justify-center">
                                   <Button size="sm" onClick={() => handleDocumentClick(request.document_url)}>
                                       <ExternalLink className="mr-2 h-4 w-4"/>
                                       Lihat Dokumen
