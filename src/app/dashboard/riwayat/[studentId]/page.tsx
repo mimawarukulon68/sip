@@ -1,23 +1,19 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams }s from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { 
   History, 
   Search, 
@@ -34,7 +30,6 @@ import {
   ExternalLink,
   User,
   CalendarDays,
-  ListRestart
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -53,6 +48,7 @@ type LeaveRequest = {
     parent_leave_id: string | null;
     document_url: string | null;
     created_by_user_id: string;
+    parent_leave_index?: number;
 };
 
 type ParentProfile = {
@@ -97,7 +93,7 @@ export default function StudentHistoryPage() {
             .from('leave_requests')
             .select(`*`)
             .eq('student_id', studentId)
-            .order('start_date', { ascending: false }); // Order by newest first
+            .order('start_date', { ascending: false });
 
         const [{ data: studentData, error: studentError }, { data: requestsData, error: requestsError }] = await Promise.all([
             studentPromise,
@@ -108,7 +104,35 @@ export default function StudentHistoryPage() {
         if (requestsError) console.error("Error fetching requests:", requestsError);
 
         setStudent(studentData as Student);
-        setLeaveRequests(requestsData as LeaveRequest[] || []);
+        
+        if (requestsData) {
+            const extensionMap = new Map<string, number>();
+            const processedRequests = requestsData.map(req => {
+                if (req.parent_leave_id) {
+                    const count = (extensionMap.get(req.parent_leave_id) || 0) + 1;
+                    extensionMap.set(req.parent_leave_id, count);
+                    // Find the root parent
+                    let rootId = req.parent_leave_id;
+                    let current = req;
+                    const allReqs = requestsData;
+                    while(current && current.parent_leave_id) {
+                        const parent = allReqs.find(r => r.id === current.parent_leave_id);
+                        if (parent) {
+                            rootId = parent.id;
+                            current = parent;
+                        } else {
+                            break;
+                        }
+                    }
+                     const siblings = allReqs.filter(r => r.parent_leave_id === rootId || r.id === rootId).sort((a,b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+                     const myIndex = siblings.findIndex(r => r.id === req.id);
+                     return { ...req, parent_leave_index: myIndex };
+                }
+                return req;
+            }).sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+
+            setLeaveRequests(processedRequests as LeaveRequest[]);
+        }
 
         if(requestsData && requestsData.length > 0) {
             const userIds = [...new Set(requestsData.map(req => req.created_by_user_id))];
@@ -138,7 +162,9 @@ export default function StudentHistoryPage() {
   }
 
   const filteredRequests = useMemo(() => leaveRequests.filter(request => {
-    const matchesSearch = !searchTerm || (request.reason && request.reason.toLowerCase().includes(searchTerm.toLowerCase()));
+    const reasonMatch = request.reason ? request.reason.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+    const parentReasonMatch = (getParentLeave(request.parent_leave_id)?.reason || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || reasonMatch || (request.parent_leave_id && parentReasonMatch);
     const matchesStatus = filterStatus === "all" || request.status.toUpperCase() === filterStatus.toUpperCase();
     const matchesType = filterType === "all" || request.leave_type.toUpperCase() === filterType.toUpperCase();
     return matchesSearch && matchesStatus && matchesType;
@@ -346,7 +372,7 @@ export default function StudentHistoryPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <Accordion type="single" collapsible className="w-full space-y-2">
               {filteredRequests.map((request) => {
                 const isExtension = !!request.parent_leave_id;
                 const parentLeave = getParentLeave(request.parent_leave_id);
@@ -355,126 +381,73 @@ export default function StudentHistoryPage() {
                 const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <Dialog key={request.id}>
-                    <Card className={cn("overflow-hidden", isExtension && "border-l-4 border-amber-300")}>
-                        <CardHeader className="p-4 bg-slate-50/70 border-b">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                                        <Badge variant={isSakit ? "destructive" : "secondary"} className="text-base">
-                                          {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
-                                          {request.leave_type}
-                                        </Badge>
-                                        {isExtension && (
-                                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                                                <Link2 className="h-3 w-3 mr-1.5" />
-                                                Perpanjangan
-                                            </Badge>
-                                        )}
-                                    </CardTitle>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        {format(parseISO(request.start_date), "d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "d MMM yyyy", { locale: id })}
-                                        <span className="ml-2 font-medium">({duration} hari)</span>
-                                    </p>
-                                </div>
-                                <Badge
-                                    variant="outline"
-                                    className={cn(
-                                        "capitalize",
-                                        request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
-                                    )}
-                                >
-                                    <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
-                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
-                                    {request.status.toLowerCase()}
+                  <AccordionItem value={request.id} key={request.id} className={cn("bg-white rounded-lg shadow-sm border", isExtension && "border-amber-300")}>
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex flex-col items-start text-left flex-1 gap-2">
+                           <div className="flex items-center gap-2 flex-wrap">
+                               <Badge variant={isSakit ? "destructive" : "secondary"} className="text-sm">
+                                  {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
+                                  {request.leave_type}
                                 </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-4 text-sm">
-                           {isExtension && parentLeave && (
-                             <div className="mb-3 text-xs p-2 bg-amber-50 border border-amber-200 rounded-md">
-                                Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
-                             </div>
-                           )}
-                           <p className="italic">
-                            "{request.reason || "Tidak ada alasan yang diberikan."}"
-                           </p>
-                        </CardContent>
-                        <CardFooter className="p-4 border-t bg-slate-50/70 flex justify-between items-center">
-                            <p className="text-xs text-muted-foreground">Diajukan oleh: <strong>{submitterName}</strong></p>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    Lihat Detail
-                                </Button>
-                            </DialogTrigger>
-                        </CardFooter>
-                    </Card>
-                     <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                Detail Pengajuan: {request.leave_type}
-                            </DialogTitle>
-                            <DialogDescription>
-                                {student.full_name} - {student.classes?.class_name}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4 text-sm">
-                            <div className="grid grid-cols-3 items-center gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4"/>Status</div>
-                               <div className="col-span-2 font-medium">
-                                   <Badge
-                                    variant="outline"
-                                    className={cn(
-                                        "capitalize",
-                                        request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
-                                    )}
-                                >
-                                    {request.status.toLowerCase()}
-                                </Badge>
-                               </div>
-                            </div>
-                             <div className="grid grid-cols-3 items-center gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Periode</div>
-                               <div className="col-span-2 font-medium">{format(parseISO(request.start_date), "EEEE, d MMM yyyy", { locale: id })} - {format(parseISO(request.end_date), "EEEE, d MMM yyyy", { locale: id })} ({duration} hari)</div>
-                            </div>
-                            <div className="grid grid-cols-3 items-center gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
-                               <div className="col-span-2 font-medium">{submitterName}</div>
-                            </div>
-                            <div className="grid grid-cols-3 items-start gap-4">
+                                {isExtension && (
+                                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                                        <Link2 className="h-3 w-3 mr-1.5" />
+                                        Perpanjangan {request.parent_leave_index || ''}
+                                    </Badge>
+                                )}
+                           </div>
+                            <p className="text-sm text-muted-foreground font-semibold">
+                                {format(parseISO(request.start_date), "dd MMM", { locale: id })} - {format(parseISO(request.end_date), "dd MMM yyyy", { locale: id })}
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 ml-4">
+                            <Badge variant="outline">{duration} hari</Badge>
+                             <Badge
+                                variant="outline"
+                                className={cn(
+                                    "capitalize",
+                                    request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                )}
+                            >
+                                <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
+                                <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
+                                {request.status.toLowerCase()}
+                            </Badge>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t text-sm">
+                       {isExtension && parentLeave && (
+                         <div className="mb-3 text-xs p-2 bg-amber-50 border border-amber-200 rounded-md">
+                            Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
+                         </div>
+                       )}
+                       <div className="space-y-4 py-2">
+                           <div className="grid grid-cols-3 items-start gap-4">
                                <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
                                <div className="col-span-2 font-medium italic bg-slate-50 p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
-                            </div>
-                             {isExtension && parentLeave && (
-                                <div className="grid grid-cols-3 items-start gap-4 border-t pt-4">
-                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><Link2 className="h-4 w-4"/>Terhubung ke</div>
-                                   <div className="col-span-2 font-medium text-xs bg-amber-50 p-2 rounded-md border border-amber-200">
-                                     Izin {parentLeave.leave_type} ({format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM")})
-                                   </div>
-                                </div>
-                            )}
-                        </div>
-                        <DialogFooter className="sm:justify-between gap-2">
-                             <DialogClose asChild>
-                                <Button type="button" variant="secondary">
-                                    Tutup
-                                </Button>
-                            </DialogClose>
-                            <Button
-                                asChild
-                                disabled={!request.document_url}
-                            >
+                           </div>
+                           <div className="grid grid-cols-3 items-center gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
+                               <div className="col-span-2 font-medium">{submitterName}</div>
+                           </div>
+                           <div className="grid grid-cols-3 items-center gap-4">
+                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Diajukan pada</div>
+                               <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
+                           </div>
+                       </div>
+                       <div className="mt-4 pt-4 border-t flex justify-end">
+                            <Button asChild disabled={!request.document_url} size="sm">
                                 <a href={request.document_url || '#'} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="mr-2 h-4 w-4"/>
-                                    Lihat Dokumen Pendukung
+                                    Lihat Dokumen
                                 </a>
                             </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                       </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 )
               })}
-            </div>
+            </Accordion>
           )}
         </div>
       </main>
