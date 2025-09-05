@@ -131,7 +131,7 @@ export default function StudentHistoryPage() {
             const allProcessedIds = new Set(processedRequests.map(p => p.id));
             const orphanRequests = rawRequestsData.filter(r => !allProcessedIds.has(r.id));
             orphanRequests.forEach(req => {
-                processedRequests.push({ ...req, chain_index: undefined } as LeaveRequest);
+                processedRequests.push({ ...req, chain_index: 0 } as LeaveRequest);
             });
 
             setLeaveRequests(processedRequests.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
@@ -375,7 +375,7 @@ export default function StudentHistoryPage() {
                 </CardContent>
             </Card>
           ) : (
-            <Accordion type="single" collapsible className="w-full space-y-0">
+            <Accordion type="single" collapsible className="w-full space-y-2">
               {filteredRequests.map((request) => {
                 const isExtension = request.chain_index !== undefined && request.chain_index > 0;
                 const parentLeave = getParentLeave(request.parent_leave_id);
