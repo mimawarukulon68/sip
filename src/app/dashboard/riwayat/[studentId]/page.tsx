@@ -35,6 +35,7 @@ import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type LeaveRequest = {
     id: string;
@@ -67,6 +68,7 @@ export default function StudentHistoryPage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [userRoles, setUserRoles] = useState<Map<string, UserRole>>(new Map());
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -105,12 +107,15 @@ export default function StudentHistoryPage() {
         if (rawRequestsData) {
             const requestsById = new Map(rawRequestsData.map(req => [req.id, req as LeaveRequest]));
             const processedRequests: LeaveRequest[] = [];
+            
+            // Create a map to hold chains of requests
             const chains = new Map<string, LeaveRequest[]>();
 
-            // Group requests by their root parent
+            // First, populate the chains
             rawRequestsData.forEach(req => {
                 let rootId = req.id;
                 let current = req;
+                // Find the ultimate root of the current request
                 while (current.parent_leave_id) {
                     const parent = requestsById.get(current.parent_leave_id);
                     if (!parent) break;
@@ -132,7 +137,6 @@ export default function StudentHistoryPage() {
                 });
             });
 
-            // Sort all requests by creation date for final display
             setLeaveRequests(processedRequests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
         }
 
@@ -172,7 +176,6 @@ export default function StudentHistoryPage() {
 
   const getParentLeave = (parentId: string | null) => {
     if (!parentId) return null;
-    // We search the original raw array, not the processed one to avoid chain_index issues
     return leaveRequests.find(req => req.id === parentId);
   }
 
@@ -185,6 +188,17 @@ export default function StudentHistoryPage() {
     return matchesSearch && matchesStatus && matchesType;
   }), [leaveRequests, searchTerm, filterStatus, filterType]);
   
+  const handleDocumentClick = (url: string | null) => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      toast({
+        title: 'Informasi',
+        description: 'Tidak ada dokumen pendukung yang dilampirkan.',
+      });
+    }
+  };
+
   if (loading) {
      return (
         <div className="flex flex-col min-h-screen bg-muted/20">
@@ -319,8 +333,7 @@ export default function StudentHistoryPage() {
           </CardContent>
         </Card>
         
-        <div className="w-full space-y-4">
-          <Card>
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
                 <History className="w-5 h-5 mr-2" />
@@ -373,7 +386,6 @@ export default function StudentHistoryPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
 
 
         <div className="space-y-2">
@@ -434,36 +446,32 @@ export default function StudentHistoryPage() {
                                 </Badge>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-3 border-t text-xs bg-slate-50">
+                        <AccordionContent className="p-3 border-t text-sm bg-slate-50">
                            {isExtension && parentLeave && (
-                             <div className="mb-3 text-sm p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
+                             <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                                 Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
                              </div>
                            )}
                            <div className="space-y-4 py-2">
                                <div className="grid grid-cols-3 items-start gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
-                                   <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
+                                   <div className="col-span-2 font-medium italic bg-white p-2 rounded-md text-base">"{request.reason || "Tidak ada alasan"}"</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Dibuat oleh</div>
-                                   <div className="col-span-2 font-medium">{submitterRole}</div>
+                                   <div className="col-span-2 font-medium text-base">{submitterRole}</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Dibuat pada</div>
-                                   <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
+                                   <div className="col-span-2 font-medium text-base">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
                                </div>
                            </div>
-                           {request.document_url && (
                             <div className="mt-4 pt-4 border-t flex justify-end">
-                                  <Button asChild size="sm">
-                                      <a href={request.document_url} target="_blank" rel="noopener noreferrer">
-                                          <ExternalLink className="mr-2 h-4 w-4"/>
-                                          Lihat Dokumen
-                                      </a>
+                                  <Button size="sm" onClick={() => handleDocumentClick(request.document_url)}>
+                                      <ExternalLink className="mr-2 h-4 w-4"/>
+                                      Lihat Dokumen
                                   </Button>
                             </div>
-                           )}
                         </AccordionContent>
                       </Card>
                   </AccordionItem>
