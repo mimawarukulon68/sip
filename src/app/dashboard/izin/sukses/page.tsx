@@ -134,6 +134,7 @@ function SuccessContent() {
 
     const handleShareToWhatsApp = () => {
         const encodedMessage = encodeURIComponent(whatsappMessage);
+        // This URL format opens WhatsApp and lets the user choose a contact or group.
         window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
     };
     
@@ -248,3 +249,4 @@ export default function SuccessPage() {
         </main>
     )
 }
+
