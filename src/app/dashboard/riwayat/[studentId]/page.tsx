@@ -102,7 +102,7 @@ export default function StudentHistoryPage() {
         if (studentError) console.error("Error fetching student:", studentError);
         if (requestsError) console.error("Error fetching requests:", requestsError);
 
-        setStudent(studentData as Student);
+        setStudent(studentData as unknown as Student);
         
         if (rawRequestsData) {
             const requestsById = new Map(rawRequestsData.map(req => [req.id, req as LeaveRequest]));
@@ -443,7 +443,7 @@ export default function StudentHistoryPage() {
                                 </Badge>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-3 border-t text-sm bg-slate-50">
+                        <AccordionContent className="p-3 border-t text-xs bg-slate-50">
                            {isExtension && parentLeave && (
                              <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                                 Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
