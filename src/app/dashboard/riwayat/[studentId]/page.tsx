@@ -17,7 +17,6 @@ import {
 import { 
   History, 
   Search, 
-  Filter, 
   CheckCircle,
   Thermometer,
   ClipboardList,
@@ -48,7 +47,7 @@ type LeaveRequest = {
     parent_leave_id: string | null;
     document_url: string | null;
     created_by_user_id: string;
-    chain_index?: number; // 0 for root, 1 for 1st extension, etc.
+    chain_index?: number;
 };
 
 type ParentProfile = {
@@ -93,7 +92,7 @@ export default function StudentHistoryPage() {
             .from('leave_requests')
             .select(`*`)
             .eq('student_id', studentId)
-            .order('start_date', { ascending: true }); // Fetch in ascending order to build chains correctly
+            .order('start_date', { ascending: true });
 
         const [{ data: studentData, error: studentError }, { data: rawRequestsData, error: requestsError }] = await Promise.all([
             studentPromise,
@@ -106,52 +105,33 @@ export default function StudentHistoryPage() {
         setStudent(studentData as Student);
         
         if (rawRequestsData) {
-            // Group requests by their chain (root id)
-            const chains = new Map<string, LeaveRequest[]>();
-            
-            // Find root requests (no parent)
-            rawRequestsData.forEach(req => {
-                if (!req.parent_leave_id) {
-                    chains.set(req.id, []);
-                }
-            });
-
-            // Populate chains with all requests
-             rawRequestsData.forEach(req => {
-                let current = req;
-                let rootId = current.parent_leave_id;
-
-                // Traverse up to find the ultimate root ID
-                while (rootId) {
-                    const parent = rawRequestsData.find(r => r.id === rootId);
-                    if (parent && parent.parent_leave_id) {
-                        rootId = parent.parent_leave_id;
-                    } else if (parent) {
-                        rootId = parent.id;
-                        break;
-                    } else {
-                        rootId = null; // Should not happen with consistent data
-                    }
-                }
-                
-                if (rootId && chains.has(rootId)) {
-                    chains.get(rootId)!.push(req);
-                } else if (!req.parent_leave_id) {
-                    // This is a root request, add it to its own chain
-                    chains.get(req.id)!.unshift(req);
-                }
-            });
-
-
-            // Process chains to add index and flatten
+            const requestsById = new Map(rawRequestsData.map(req => [req.id, req]));
             const processedRequests: LeaveRequest[] = [];
-            chains.forEach(chain => {
-                // The first item is always the root
-                const sortedChain = chain.sort((a,b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
-                sortedChain.forEach((req, index) => {
-                    processedRequests.push({ ...req, chain_index: index });
-                });
+
+            rawRequestsData.forEach(req => {
+                if (!req.parent_leave_id) { // This is a root request
+                    const chain: LeaveRequest[] = [];
+                    let current: LeaveRequest | undefined = req;
+                    while (current) {
+                        chain.push(current);
+                        const nextInChain = rawRequestsData.find(r => r.parent_leave_id === current!.id);
+                        current = nextInChain;
+                    }
+                    
+                    chain.forEach((chainReq, index) => {
+                         processedRequests.push({ ...chainReq, chain_index: index });
+                    });
+                }
             });
+
+            // Handle requests that might be part of a chain but their root was not in the initial sort
+            const allProcessedIds = new Set(processedRequests.map(p => p.id));
+            const orphanRequests = rawRequestsData.filter(r => !allProcessedIds.has(r.id));
+            orphanRequests.forEach(req => {
+                // This case is unlikely with date sorting but good for safety
+                processedRequests.push({ ...req, chain_index: undefined });
+            });
+
 
             setLeaveRequests(processedRequests.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
         }
@@ -378,98 +358,104 @@ export default function StudentHistoryPage() {
                 </Badge>
             </div>
           </CardContent>
+        </Card>
 
+        <div className="space-y-4">
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground border-t">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>
-                {leaveRequests.length === 0 
-                  ? "Belum ada riwayat izin untuk siswa ini."
-                  : "Tidak ada data yang sesuai dengan filter Anda."
-                }
-              </p>
-            </div>
+            <Card>
+                <CardContent className="text-center py-16 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>
+                    {leaveRequests.length === 0 
+                      ? "Belum ada riwayat izin untuk siswa ini."
+                      : "Tidak ada data yang sesuai dengan filter Anda."
+                    }
+                  </p>
+                </CardContent>
+            </Card>
           ) : (
-            <Accordion type="single" collapsible className="w-full border-t">
+            <Accordion type="single" collapsible className="w-full space-y-4">
               {filteredRequests.map((request) => {
-                const isExtension = request.chain_index && request.chain_index > 0;
+                const isExtension = request.chain_index !== undefined && request.chain_index > 0;
                 const parentLeave = getParentLeave(request.parent_leave_id);
                 const isSakit = request.leave_type === 'Sakit';
                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
                 const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <AccordionItem value={request.id} key={request.id} className={cn("bg-white", isExtension && "bg-amber-50/50")}>
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex flex-col items-start text-left flex-1 gap-2">
-                           <div className="flex items-center gap-2 flex-wrap">
-                               <Badge variant={isSakit ? "destructive" : "secondary"} className="text-sm">
-                                  {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
-                                  {request.leave_type}
-                                </Badge>
-                                {isExtension && (
-                                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                                        <Link2 className="h-3 w-3 mr-1.5" />
-                                        Perpanjangan {request.chain_index}
+                  <Card key={request.id} className={cn("overflow-hidden", isExtension && "border-amber-300")}>
+                    <AccordionItem value={request.id} className="border-b-0">
+                        <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:bg-slate-50">
+                            <div className="flex flex-col items-start text-left flex-1 gap-2">
+                               <div className="flex items-center gap-2 flex-wrap">
+                                   <Badge variant={isSakit ? "destructive" : "secondary"} className="text-sm">
+                                      {isSakit ? <Thermometer className="h-4 w-4 mr-1.5" /> : <ClipboardList className="h-4 w-4 mr-1.5" />}
+                                      {request.leave_type}
                                     </Badge>
-                                )}
+                                    {isExtension && (
+                                        <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                                            <Link2 className="h-3 w-3 mr-1.5" />
+                                            Perpanjangan {request.chain_index}
+                                        </Badge>
+                                    )}
+                               </div>
+                                <p className="text-sm text-muted-foreground font-semibold">
+                                    {format(parseISO(request.start_date), "dd MMM", { locale: id })} - {format(parseISO(request.end_date), "dd MMM yyyy", { locale: id })}
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 ml-4">
+                                <Badge variant="outline">{duration} hari</Badge>
+                                 <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        "capitalize",
+                                        request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
+                                    )}
+                                >
+                                    <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
+                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
+                                    {request.status.toLowerCase()}
+                                </Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 border-t text-sm bg-slate-50">
+                           {isExtension && parentLeave && (
+                             <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
+                                Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
+                             </div>
+                           )}
+                           <div className="space-y-4 py-2">
+                               <div className="grid grid-cols-3 items-start gap-4">
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
+                                   <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
+                               </div>
+                               <div className="grid grid-cols-3 items-center gap-4">
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
+                                   <div className="col-span-2 font-medium">{submitterName}</div>
+                               </div>
+                               <div className="grid grid-cols-3 items-center gap-4">
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Diajukan pada</div>
+                                   <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
+                               </div>
                            </div>
-                            <p className="text-sm text-muted-foreground font-semibold">
-                                {format(parseISO(request.start_date), "dd MMM", { locale: id })} - {format(parseISO(request.end_date), "dd MMM yyyy", { locale: id })}
-                            </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 ml-4">
-                            <Badge variant="outline">{duration} hari</Badge>
-                             <Badge
-                                variant="outline"
-                                className={cn(
-                                    "capitalize",
-                                    request.status === 'AKTIF' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-green-100 text-green-800 border-green-200'
-                                )}
-                            >
-                                <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
-                                <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
-                                {request.status.toLowerCase()}
-                            </Badge>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 border-t text-sm bg-slate-50">
-                       {isExtension && parentLeave && (
-                         <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
-                            Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
-                         </div>
-                       )}
-                       <div className="space-y-4 py-2">
-                           <div className="grid grid-cols-3 items-start gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
-                               <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
-                           </div>
-                           <div className="grid grid-cols-3 items-center gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
-                               <div className="col-span-2 font-medium">{submitterName}</div>
-                           </div>
-                           <div className="grid grid-cols-3 items-center gap-4">
-                               <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Diajukan pada</div>
-                               <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
-                           </div>
-                       </div>
-                       {request.document_url && (
-                        <div className="mt-4 pt-4 border-t flex justify-end">
-                              <Button asChild size="sm">
-                                  <a href={request.document_url} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="mr-2 h-4 w-4"/>
-                                      Lihat Dokumen
-                                  </a>
-                              </Button>
-                        </div>
-                       )}
-                    </AccordionContent>
-                  </AccordionItem>
+                           {request.document_url && (
+                            <div className="mt-4 pt-4 border-t flex justify-end">
+                                  <Button asChild size="sm">
+                                      <a href={request.document_url} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="mr-2 h-4 w-4"/>
+                                          Lihat Dokumen
+                                      </a>
+                                  </Button>
+                            </div>
+                           )}
+                        </AccordionContent>
+                      </AccordionItem>
+                  </Card>
                 )
               })}
             </Accordion>
           )}
-        </Card>
+        </div>
       </main>
     </div>
   );
