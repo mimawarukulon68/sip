@@ -371,7 +371,7 @@ export default function ParentDashboardPage() {
       setShowExtensionDialog(false);
   }
   
-  const handleAjukanIzinClick = (student: StudentData) => {
+  const handleCreateLeaveClick = (student: StudentData) => {
       const yesterday = subDays(startOfToday(), 1);
       const extendableLeave = student.leave_requests.find(lr => {
           if (lr.status !== 'SELESAI') return false;
@@ -751,9 +751,9 @@ export default function ParentDashboardPage() {
                       <>
                         {isCurrentPeriodActive && (
                           <>
-                            <Button size="sm" className="flex-1" onClick={() => handleAjukanIzinClick(student)}>
+                            <Button size="sm" className="flex-1" onClick={() => handleCreateLeaveClick(student)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Ajukan Izin
+                                Buat Izin
                             </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>

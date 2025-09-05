@@ -318,7 +318,7 @@ export default function StudentHistoryPage() {
                 Cari atau filter riwayat pengajuan izin berdasarkan status atau jenis izin.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <CardContent className="p-6 pt-0 space-y-4">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-1">
                   <div className="relative">
@@ -422,23 +422,23 @@ export default function StudentHistoryPage() {
                                 </Badge>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-4 border-t text-sm bg-slate-50">
+                        <AccordionContent className="p-3 border-t text-xs bg-slate-50">
                            {isExtension && parentLeave && (
                              <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                                 Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
                              </div>
                            )}
-                           <div className="space-y-4 py-2">
+                           <div className="space-y-4">
                                <div className="grid grid-cols-3 items-start gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
                                    <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
-                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Diajukan oleh</div>
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Dibuat oleh</div>
                                    <div className="col-span-2 font-medium">{submitterName}</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
-                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Diajukan pada</div>
+                                   <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Dibuat pada</div>
                                    <div className="col-span-2 font-medium">{format(parseISO(request.created_at), "EEEE, d MMM yyyy 'pukul' HH:mm", { locale: id })}</div>
                                </div>
                            </div>
