@@ -50,9 +50,7 @@ type LeaveRequest = {
     chain_index?: number;
 };
 
-type ParentProfile = {
-    full_name: string;
-}
+type UserRole = 'Orang Tua/Wali' | 'Wali Kelas' | 'Admin' | 'N/A';
 
 type Student = {
     id: string;
@@ -67,7 +65,7 @@ export default function StudentHistoryPage() {
   const studentId = params.studentId as string;
   const [student, setStudent] = useState<Student | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [parentProfiles, setParentProfiles] = useState<Map<string, string>>(new Map());
+  const [userRoles, setUserRoles] = useState<Map<string, UserRole>>(new Map());
   const [loading, setLoading] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,7 +107,6 @@ export default function StudentHistoryPage() {
             const processedRequests: LeaveRequest[] = [];
             const chains = new Map<string, LeaveRequest[]>();
 
-            // Group requests by chain
             rawRequestsData.forEach(req => {
                 let rootId = req.id;
                 let current = req;
@@ -126,7 +123,6 @@ export default function StudentHistoryPage() {
                 chains.get(rootId)!.push(req as LeaveRequest);
             });
 
-            // Process each chain
             chains.forEach(chain => {
                 const sortedChain = chain.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
                 sortedChain.forEach((req, index) => {
@@ -139,17 +135,29 @@ export default function StudentHistoryPage() {
 
         if(rawRequestsData && rawRequestsData.length > 0) {
             const userIds = [...new Set(rawRequestsData.map(req => req.created_by_user_id))];
-            const { data: profiles, error: profilesError } = await supabase
-                .from('parent_profiles')
-                .select('user_id, full_name')
-                .in('user_id', userIds);
+            const rolesMap = new Map<string, UserRole>();
 
-            if (profilesError) {
-                console.error("Error fetching parent profiles:", profilesError);
-            } else if (profiles) {
-                const profilesMap = new Map(profiles.map(p => [p.user_id, p.full_name]));
-                setParentProfiles(profilesMap);
+            const [
+                { data: parentProfiles },
+                { data: teacherProfiles },
+                { data: adminProfiles }
+            ] = await Promise.all([
+                supabase.from('parent_profiles').select('user_id').in('user_id', userIds),
+                supabase.from('teacher_profiles').select('user_id').in('user_id', userIds),
+                supabase.from('admin_profiles').select('user_id').in('user_id', userIds)
+            ]);
+
+            const parentUserIds = new Set(parentProfiles?.map(p => p.user_id));
+            const teacherUserIds = new Set(teacherProfiles?.map(p => p.user_id));
+            const adminUserIds = new Set(adminProfiles?.map(p => p.user_id));
+
+            for (const userId of userIds) {
+                if (adminUserIds.has(userId)) rolesMap.set(userId, 'Admin');
+                else if (teacherUserIds.has(userId)) rolesMap.set(userId, 'Wali Kelas');
+                else if (parentUserIds.has(userId)) rolesMap.set(userId, 'Orang Tua/Wali');
+                else rolesMap.set(userId, 'N/A');
             }
+            setUserRoles(rolesMap);
         }
         
         setLoading(false);
@@ -384,7 +392,7 @@ export default function StudentHistoryPage() {
                 const parentLeave = getParentLeave(request.parent_leave_id);
                 const isSakit = request.leave_type === 'Sakit';
                 const duration = differenceInCalendarDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
-                const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
+                const submitterRole = userRoles.get(request.created_by_user_id) || 'N/A';
 
                 return (
                   <Card key={request.id} className="overflow-hidden rounded-lg">
@@ -422,20 +430,20 @@ export default function StudentHistoryPage() {
                                 </Badge>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-3 border-t text-xs bg-slate-50">
+                        <AccordionContent className="p-3 border-t text-sm bg-slate-50">
                            {isExtension && parentLeave && (
-                             <div className="mb-3 text-xs p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
+                             <div className="mb-3 text-sm p-2 bg-amber-100 border border-amber-200 rounded-md text-amber-900">
                                 Menjadi perpanjangan dari izin <strong>{parentLeave.leave_type}</strong> pada tanggal <strong>{format(parseISO(parentLeave.start_date), "d MMM")} - {format(parseISO(parentLeave.end_date), "d MMM yyyy")}</strong>.
                              </div>
                            )}
-                           <div className="space-y-4">
+                           <div className="space-y-4 py-2">
                                <div className="grid grid-cols-3 items-start gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2 pt-1"><FileText className="h-4 w-4"/>Alasan</div>
                                    <div className="col-span-2 font-medium italic bg-white p-2 rounded-md">"{request.reason || "Tidak ada alasan"}"</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><User className="h-4 w-4"/>Dibuat oleh</div>
-                                   <div className="col-span-2 font-medium">{submitterName}</div>
+                                   <div className="col-span-2 font-medium">{submitterRole}</div>
                                </div>
                                <div className="grid grid-cols-3 items-center gap-4">
                                    <div className="col-span-1 text-muted-foreground flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Dibuat pada</div>
