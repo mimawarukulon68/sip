@@ -17,7 +17,6 @@ import {
 import { 
   History, 
   Search, 
-  CheckCircle,
   Thermometer,
   ClipboardList,
   ArrowLeft,
@@ -29,6 +28,7 @@ import {
   ExternalLink,
   User,
   CalendarDays,
+  CircleCheckBig,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -107,34 +107,34 @@ export default function StudentHistoryPage() {
         if (rawRequestsData) {
             const requestsById = new Map(rawRequestsData.map(req => [req.id, req as LeaveRequest]));
             const processedRequests: LeaveRequest[] = [];
+            const chains = new Map<string, LeaveRequest[]>();
 
-            // Find all root requests (those without a parent)
-            const rootRequests = rawRequestsData.filter(req => !req.parent_leave_id);
-
-            // Build chains for each root request
-            rootRequests.forEach(root => {
-                const chain: LeaveRequest[] = [];
-                let current: LeaveRequest | undefined = root as LeaveRequest;
-                while (current) {
-                    chain.push(current);
-                    // Find the next request in the chain
-                    const nextInChain = rawRequestsData.find(r => r.parent_leave_id === current!.id);
-                    current = nextInChain as LeaveRequest | undefined;
+            // Group requests by chain
+            rawRequestsData.forEach(req => {
+                let rootId = req.id;
+                let current = req;
+                while (current.parent_leave_id) {
+                    const parent = requestsById.get(current.parent_leave_id);
+                    if (!parent) break;
+                    current = parent;
+                    rootId = parent.id;
                 }
                 
-                chain.forEach((chainReq, index) => {
-                     processedRequests.push({ ...chainReq, chain_index: index });
+                if (!chains.has(rootId)) {
+                    chains.set(rootId, []);
+                }
+                chains.get(rootId)!.push(req as LeaveRequest);
+            });
+
+            // Process each chain
+            chains.forEach(chain => {
+                const sortedChain = chain.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+                sortedChain.forEach((req, index) => {
+                    processedRequests.push({ ...req, chain_index: index });
                 });
             });
 
-            // Ensure no requests are left out (e.g., orphaned children)
-            const allProcessedIds = new Set(processedRequests.map(p => p.id));
-            const orphanRequests = rawRequestsData.filter(r => !allProcessedIds.has(r.id));
-            orphanRequests.forEach(req => {
-                processedRequests.push({ ...req, chain_index: 0 } as LeaveRequest);
-            });
-
-            setLeaveRequests(processedRequests.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
+            setLeaveRequests(processedRequests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
         }
 
         if(rawRequestsData && rawRequestsData.length > 0) {
@@ -291,7 +291,7 @@ export default function StudentHistoryPage() {
               <div className="grid grid-cols-2 gap-2 text-center text-xs sm:text-sm">
                   <div>
                       <div className="flex items-center justify-center gap-2 text-green-700">
-                            <CheckCircle className="w-4 h-4" />
+                            <CircleCheckBig className="w-4 h-4" />
                             <span className="font-semibold">Selesai</span>
                       </div>
                       <p className="font-bold text-base mt-1">{completedSubmissions}</p>
@@ -307,59 +307,62 @@ export default function StudentHistoryPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <History className="w-5 h-5 mr-2" />
-              Detail Riwayat Pengajuan
-            </CardTitle>
-            <CardDescription>
-              Cari atau filter riwayat pengajuan izin berdasarkan status atau jenis izin.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cari alasan..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+        <div className="w-full space-y-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-lg">
+                <History className="w-5 h-5 mr-2" />
+                Detail Riwayat Pengajuan
+              </CardTitle>
+              <CardDescription>
+                Cari atau filter riwayat pengajuan izin berdasarkan status atau jenis izin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6 pt-0">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari alasan..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
+                
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Semua Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="AKTIF">Aktif</SelectItem>
+                    <SelectItem value="SELESAI">Selesai</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Semua Jenis" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Jenis</SelectItem>
+                    <SelectItem value="Sakit">Sakit</SelectItem>
+                    <SelectItem value="Izin">Izin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Semua Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="AKTIF">Aktif</SelectItem>
-                  <SelectItem value="SELESAI">Selesai</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Semua Jenis" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Jenis</SelectItem>
-                  <SelectItem value="Sakit">Sakit</SelectItem>
-                  <SelectItem value="Izin">Izin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="pt-4 flex justify-center">
-                <Badge variant="outline">
-                    Menampilkan {filteredRequests.length} dari {totalSubmissions} hasil
-                </Badge>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="pt-2 flex justify-center">
+                  <Badge variant="outline">
+                      Menampilkan {filteredRequests.length} dari {totalSubmissions} hasil
+                  </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
 
         <div className="space-y-2">
           {filteredRequests.length === 0 ? (
@@ -384,9 +387,9 @@ export default function StudentHistoryPage() {
                 const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <Card key={request.id} className={cn("overflow-hidden rounded-lg")}>
+                  <Card key={request.id} className="overflow-hidden rounded-lg">
                     <AccordionItem value={request.id} className="border-b-0">
-                        <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:bg-slate-50">
+                        <AccordionTrigger className="p-3 hover:no-underline data-[state=open]:bg-slate-50">
                             <div className="flex flex-col items-start text-left flex-1 gap-2">
                                <div className="flex items-center gap-2 flex-wrap">
                                    <Badge variant={isSakit ? "destructive" : "secondary"} className="text-sm">
@@ -404,7 +407,7 @@ export default function StudentHistoryPage() {
                                     {format(parseISO(request.start_date), "dd MMM", { locale: id })} - {format(parseISO(request.end_date), "dd MMM yyyy", { locale: id })}
                                 </p>
                             </div>
-                            <div className="flex flex-col items-end gap-2 ml-4">
+                            <div className="flex flex-col items-end gap-2 mx-2">
                                 <Badge variant="outline">{duration} hari</Badge>
                                  <Badge
                                     variant="outline"
@@ -414,7 +417,7 @@ export default function StudentHistoryPage() {
                                     )}
                                 >
                                     <Clock className={cn("h-3 w-3 mr-1.5", request.status === 'SELESAI' && 'hidden')} />
-                                    <CheckCircle className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
+                                    <CircleCheckBig className={cn("h-3 w-3 mr-1.5", request.status === 'AKTIF' && 'hidden')} />
                                     {request.status.toLowerCase()}
                                 </Badge>
                             </div>
