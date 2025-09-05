@@ -105,33 +105,34 @@ export default function StudentHistoryPage() {
         setStudent(studentData as Student);
         
         if (rawRequestsData) {
-            const requestsById = new Map(rawRequestsData.map(req => [req.id, req]));
+            const requestsById = new Map(rawRequestsData.map(req => [req.id, req as LeaveRequest]));
             const processedRequests: LeaveRequest[] = [];
 
-            rawRequestsData.forEach(req => {
-                if (!req.parent_leave_id) { // This is a root request
-                    const chain: LeaveRequest[] = [];
-                    let current: LeaveRequest | undefined = req;
-                    while (current) {
-                        chain.push(current);
-                        const nextInChain = rawRequestsData.find(r => r.parent_leave_id === current!.id);
-                        current = nextInChain;
-                    }
-                    
-                    chain.forEach((chainReq, index) => {
-                         processedRequests.push({ ...chainReq, chain_index: index });
-                    });
+            // Find all root requests (those without a parent)
+            const rootRequests = rawRequestsData.filter(req => !req.parent_leave_id);
+
+            // Build chains for each root request
+            rootRequests.forEach(root => {
+                const chain: LeaveRequest[] = [];
+                let current: LeaveRequest | undefined = root as LeaveRequest;
+                while (current) {
+                    chain.push(current);
+                    // Find the next request in the chain
+                    const nextInChain = rawRequestsData.find(r => r.parent_leave_id === current!.id);
+                    current = nextInChain as LeaveRequest | undefined;
                 }
+                
+                chain.forEach((chainReq, index) => {
+                     processedRequests.push({ ...chainReq, chain_index: index });
+                });
             });
 
-            // Handle requests that might be part of a chain but their root was not in the initial sort
+            // Ensure no requests are left out (e.g., orphaned children)
             const allProcessedIds = new Set(processedRequests.map(p => p.id));
             const orphanRequests = rawRequestsData.filter(r => !allProcessedIds.has(r.id));
             orphanRequests.forEach(req => {
-                // This case is unlikely with date sorting but good for safety
-                processedRequests.push({ ...req, chain_index: undefined });
+                processedRequests.push({ ...req, chain_index: undefined } as LeaveRequest);
             });
-
 
             setLeaveRequests(processedRequests.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
         }
@@ -181,9 +182,9 @@ export default function StudentHistoryPage() {
              </div>
           </header>
           <main className="container mx-auto p-4 md:p-8 space-y-8">
-             <Skeleton className="h-40 w-full" />
-             <Skeleton className="h-40 w-full" />
-             <Skeleton className="h-64 w-full" />
+             <Skeleton className="h-40 w-full rounded-xl" />
+             <Skeleton className="h-40 w-full rounded-xl" />
+             <Skeleton className="h-64 w-full rounded-xl" />
           </main>
         </div>
     );
@@ -352,7 +353,7 @@ export default function StudentHistoryPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="pt-2">
+            <div className="pt-4 flex justify-center">
                 <Badge variant="outline">
                     Menampilkan {filteredRequests.length} dari {totalSubmissions} hasil
                 </Badge>
@@ -360,7 +361,7 @@ export default function StudentHistoryPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {filteredRequests.length === 0 ? (
             <Card>
                 <CardContent className="text-center py-16 text-muted-foreground">
@@ -374,7 +375,7 @@ export default function StudentHistoryPage() {
                 </CardContent>
             </Card>
           ) : (
-            <Accordion type="single" collapsible className="w-full space-y-4">
+            <Accordion type="single" collapsible className="w-full space-y-0">
               {filteredRequests.map((request) => {
                 const isExtension = request.chain_index !== undefined && request.chain_index > 0;
                 const parentLeave = getParentLeave(request.parent_leave_id);
@@ -383,7 +384,7 @@ export default function StudentHistoryPage() {
                 const submitterName = parentProfiles.get(request.created_by_user_id) || 'N/A';
 
                 return (
-                  <Card key={request.id} className={cn("overflow-hidden", isExtension && "border-amber-300")}>
+                  <Card key={request.id} className={cn("overflow-hidden rounded-lg")}>
                     <AccordionItem value={request.id} className="border-b-0">
                         <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:bg-slate-50">
                             <div className="flex flex-col items-start text-left flex-1 gap-2">
